@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#FFFFFF">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="新增食物"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Row: Fridge -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="存放位置："
+                android:textSize="18sp"
+                android:textColor="#666666" />
+            <Spinner
+                android:id="@+id/fridgeSpinner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="120dp" />
+        </LinearLayout>
+
+        <!-- Row: Category & Item -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="选择分类："
+                android:textSize="18sp"
+                android:textColor="#666666" />
+            <Spinner
+                android:id="@+id/categorySpinner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="110dp" />
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="选择食物："
+                android:textSize="18sp"
+                android:textColor="#666666"
+                android:layout_marginLeft="20dp" />
+            <Spinner
+                android:id="@+id/itemSpinner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="130dp" />
+        </LinearLayout>
+
+        <!-- Row: New Item Name (shown only when "新增..." is selected) -->
+        <LinearLayout
+            android:id="@+id/layoutNewItemName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="选择食物："
+                android:textSize="18sp"
+                android:textColor="#666666" />
+            <EditText
+                android:id="@+id/editNewItemName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="输入新食物名称..."
+                android:textSize="16sp" />
+        </LinearLayout>
+
+        <!-- Row: Quantity & Portions -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="24dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="总量："
+                android:textSize="18sp"
+                android:textColor="#666666" />
+            <EditText
+                android:id="@+id/editQuantity"
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:hint="________"
+                android:textSize="18sp"
+                android:inputType="numberDecimal"
+                android:background="@null" />
+            <Spinner
+                android:id="@+id/unitSpinner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="60dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="分割份数 (可选)： "
+                android:textSize="18sp"
+                android:textColor="#666666"
+                android:layout_marginLeft="24dp" />
+            <EditText
+                android:id="@+id/editPortions"
+                android:layout_width="80dp"
+                android:layout_height="wrap_content"
+                android:hint="________"
+                android:textSize="18sp"
+                android:inputType="number"
+                android:background="@null" />
+        </LinearLayout>
+        
+        <!-- Row: Remark (Conditional) -->
+        <LinearLayout
+            android:id="@+id/layoutRemark"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="备注说明："
+                android:textSize="18sp"
+                android:textColor="@color/text_secondary" />
+            <EditText
+                android:id="@+id/editRemark"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="可选输入食物具体名称"
+                android:textSize="16sp"
+                android:background="@null" />
+        </LinearLayout>
+
+        <!-- Expiry Preview Area -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_horizontal|center_vertical"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="16dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="保质期至："
+                android:textSize="18sp"
+                android:textColor="@color/text_hint"
+                android:layout_marginRight="8dp" />
+            <TextView
+                android:id="@+id/textExpiryValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2026-03-01"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:textColor="@color/blue_primary" />
+        </LinearLayout>
+
+        <!-- Preserve Existing Presets Grid -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="4dp">
+                <Button android:id="@+id/btn3d" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="3天" android:textSize="16sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+                <Button android:id="@+id/btn1w" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="1周" android:textSize="16sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+                <Button android:id="@+id/btn2w" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="2周" android:textSize="14sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+                <Button android:id="@+id/btn1m" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="1个月" android:textSize="14sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+                <Button android:id="@+id/btn3m" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="3个月" android:textSize="14sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+                <Button android:id="@+id/btn6m" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="半年" android:textSize="16sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp" android:layout_marginBottom="4dp">
+                <Button android:id="@+id/btnThisYear" android:layout_width="140dp" android:layout_height="50dp" android:text="今年 (2026)" android:textSize="16sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+                <Button android:id="@+id/btnNextYear" android:layout_width="140dp" android:layout_height="50dp" android:text="明年 (2027)" android:textSize="16sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+                <Button android:id="@+id/btnCustomDate" android:layout_width="match_parent" android:layout_height="50dp" android:text="自定义日期..." android:textSize="16sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+            </LinearLayout>
+
+            <!-- Month Panel (Replacing GridLayout with LinearLayouts for better stability on Legacy) -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/btnMonth1" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="1月" android:textSize="16sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+                <Button android:id="@+id/btnMonth2" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="2月" android:textSize="16sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+                <Button android:id="@+id/btnMonth3" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="3月" android:textSize="16sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+                <Button android:id="@+id/btnMonth4" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="4月" android:textSize="16sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+                <Button android:id="@+id/btnMonth5" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="5月" android:textSize="16sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+                <Button android:id="@+id/btnMonth6" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="6月" android:textSize="16sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/btnMonth7" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="7月" android:textSize="16sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+                <Button android:id="@+id/btnMonth8" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="8月" android:textSize="16sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+                <Button android:id="@+id/btnMonth9" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="9月" android:textSize="16sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+                <Button android:id="@+id/btnMonth10" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="10月" android:textSize="14sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+                <Button android:id="@+id/btnMonth11" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="11月" android:textSize="14sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+                <Button android:id="@+id/btnMonth12" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="12月" android:textSize="14sp" android:background="#EEEEEE" android:layout_margin="2dp" />
+            </LinearLayout>
+
+            <DatePicker
+                android:id="@+id/datePicker"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:calendarViewShown="false"
+                android:datePickerMode="spinner"
+                android:visibility="gone" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

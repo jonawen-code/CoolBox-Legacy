@@ -1,0 +1,4 @@
+#Sun Mar 08 14:30:05 GMT+08:00 2026
+base.0=O\:\\APP.Project\\SynologyDrive\\CoolBox-Legacy\\app\\build\\intermediates\\dex\\debug\\mergeDexDebug\\classes.dex
+renamed.0=classes.dex
+path.0=classes.dex

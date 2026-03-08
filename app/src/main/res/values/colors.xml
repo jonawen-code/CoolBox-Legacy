@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- CoolBox Blue Palette -->
+    <color name="blue_primary">#FF03A9F4</color>
+    <color name="blue_dark">#FF0288D1</color>
+    <color name="blue_light">#FFE3F2FD</color>
+    <color name="blue_accent">#FF2196F3</color>
+
+    <color name="bg_primary">#FFF5F5F5</color>
+    <color name="bg_card">#FFFFFFFF</color>
+
+    <color name="text_primary">#FF1A1A1A</color>
+    <color name="text_secondary">#FF444444</color>
+    <color name="text_hint">#FF555555</color>
+
+    <color name="accent_quantity">#FF2196F3</color>
+    <color name="accent_danger">#FFD32F2F</color>
+    <color name="accent_danger_bg">#FFFFEBEE</color>
+    <color name="accent_warning">#FFF57F17</color>
+    <color name="accent_warning_bg">#FFFFF9C4</color>
+
+    <color name="btn_take_bg">#FFE8F5E9</color>
+    <color name="btn_take_text">#FF2E7D32</color>
+    <color name="btn_takeall_bg">#FFE3F2FD</color>
+    <color name="btn_takeall_text">#FF0D47A1</color>
+
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>

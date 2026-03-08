@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:background="#FFFFFF">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="实验室 (时光机设置)"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:id="@+id/currentVirtualTime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="当前虚拟时间: 2024-01-01"
+        android:textSize="18sp"
+        android:textColor="#2196F3"
+        android:layout_marginBottom="24dp"
+        android:gravity="center" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+        
+        <Button
+            android:id="@+id/btnScaleDown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="-" />
+
+        <TextView
+            android:id="@+id/textScaleValue"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="100%"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:textColor="#2196F3" />
+
+        <Button
+            android:id="@+id/btnScaleUp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="+" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="12dp">
+        <Button android:id="@+id/btnPlus1d" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="+1天" android:layout_marginEnd="8dp"/>
+        <Button android:id="@+id/btnPlus1w" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="+1周" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="12dp">
+        <Button android:id="@+id/btnPlus1m" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="+1月" android:layout_marginEnd="8dp"/>
+        <Button android:id="@+id/btnResetTime" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="回归今天" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="一旦设定，整个App的保质期状态都会基于此时间显示。重新进入App将重置时间。"
+        android:textSize="12sp"
+        android:textColor="#999999"
+        android:layout_marginTop="8dp" />
+
+</LinearLayout>

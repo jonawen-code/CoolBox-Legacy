@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF">
+
+    <!-- Main Content Container -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Row 1: Header (Optimized for Portrait) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="10dp"
+            android:background="#FFFFFF">
+
+            <!-- Title Row -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:id="@+id/appTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CoolBox"
+                    android:textSize="32sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/blue_primary"
+                    android:layout_alignParentLeft="true"
+                    android:layout_centerVertical="true" />
+
+                <!-- Scale Controls Integrated in Header -->
+                <LinearLayout
+                    android:id="@+id/scaleLayout"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_toLeftOf="@+id/btnRefresh"
+                    android:layout_centerVertical="true"
+                    android:layout_marginRight="12dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <Button
+                        android:id="@+id/btnScaleDown"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:text="-"
+                        android:textSize="12sp"
+                        android:minHeight="0dp"
+                        android:minWidth="0dp"
+                        android:background="#FAFAFA" />
+
+                    <TextView
+                        android:id="@+id/txtScaleInfo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="100%"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="#333333"
+                        android:layout_marginLeft="6dp"
+                        android:layout_marginRight="6dp" />
+
+                    <Button
+                        android:id="@+id/btnScaleUp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:text="+"
+                        android:textSize="12sp"
+                        android:minHeight="0dp"
+                        android:minWidth="0dp"
+                        android:background="#FAFAFA" />
+                </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/btnRefresh"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_toLeftOf="@+id/btnSettings"
+                    android:layout_centerVertical="true"
+                    android:src="@android:drawable/ic_popup_sync"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:contentDescription="Refresh Sync"
+                    android:layout_marginRight="4dp" />
+
+                <ImageButton
+                    android:id="@+id/btnSettings"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_alignParentRight="true"
+                    android:layout_centerVertical="true"
+                    android:src="@android:drawable/ic_menu_manage"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:contentDescription="Settings" />
+            </RelativeLayout>
+
+            <!-- Time Machine Dashboard (Wraps below title) -->
+            <LinearLayout
+                android:id="@+id/timeMachineDashboard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/bg_primary"
+                android:orientation="horizontal"
+                android:padding="6dp"
+                android:gravity="center_vertical"
+                android:layout_marginTop="6dp">
+                
+                <TextView
+                    android:id="@+id/txtCurrentSimTime"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="🕒 2026-03-01"
+                    android:textStyle="bold"
+                    android:textColor="@color/accent_warning"
+                    android:textSize="12sp" />
+                
+                <Button android:id="@+id/btnTimePlus1D" android:layout_width="wrap_content" android:layout_height="28dp" android:text="+1天" android:textSize="11sp" android:minHeight="0dp" android:minWidth="40dp" android:background="#FFFFFF" android:layout_marginEnd="4dp" />
+                <Button android:id="@+id/btnTimePlus1W" android:layout_width="wrap_content" android:layout_height="28dp" android:text="+1周" android:textSize="11sp" android:minHeight="0dp" android:minWidth="40dp" android:background="#FFFFFF" android:layout_marginEnd="4dp" />
+                <Button android:id="@+id/btnTimePlus1M" android:layout_width="wrap_content" android:layout_height="28dp" android:text="+1月" android:textSize="11sp" android:minHeight="0dp" android:minWidth="40dp" android:background="#FFFFFF" android:layout_marginEnd="4dp" />
+                <Button android:id="@+id/btnTimeReset" android:layout_width="wrap_content" android:layout_height="28dp" android:text="回到今天" android:textSize="11sp" android:minHeight="0dp" android:minWidth="60dp" android:background="@color/accent_danger_bg" android:textColor="@color/accent_danger" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Row 2: Navigation (Tabs & Quick Entry) -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#FFFFFF"
+            android:scrollbars="none">
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingBottom="4dp">
+                <LinearLayout
+                    android:id="@+id/fridgeTabs"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <Button
+                        android:id="@+id/btnSummary"
+                        android:layout_width="100dp"
+                        android:layout_height="56dp"
+                        android:text="汇总"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:minWidth="100dp"
+                        android:background="#FAFAFA"
+                        android:textColor="#333333" />
+                </LinearLayout>
+                <LinearLayout
+                    android:id="@+id/quickEntryBar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginLeft="6dp">
+                    <!-- Dynamically populated from settings categories -->
+                </LinearLayout>
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- List Content -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/foodList"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingBottom="16dp" />
+
+    </LinearLayout>
+
+    <!-- Version Info (Bottom-Right, Small Gray) -->
+    <TextView
+        android:id="@+id/txtAppVersion"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginRight="8dp"
+        android:layout_marginBottom="4dp"
+        android:text="v1.2.16-Blue"
+        android:textSize="10sp"
+        android:textColor="@color/text_hint" />
+
+
+    <!-- FAB for adding food (if needed) -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/addFoodFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentBottom="true"
+        android:layout_margin="16dp"
+        android:layout_marginBottom="40dp"
+        android:src="@android:drawable/ic_input_add"
+        android:visibility="gone" />
+
+</RelativeLayout>
