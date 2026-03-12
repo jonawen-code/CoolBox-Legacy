@@ -8,7 +8,8 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:animateLayoutChanges="true">
 
         <!-- Row 1: Header (Optimized for Portrait) -->
         <LinearLayout
@@ -26,7 +27,7 @@
                     android:id="@+id/appTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="CoolBox"
+                    android:text="@string/app_name"
                     android:textSize="32sp"
                     android:textStyle="bold"
                     android:textColor="@color/blue_primary"
@@ -102,26 +103,49 @@
                 android:id="@+id/timeMachineDashboard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@color/bg_primary"
                 android:orientation="horizontal"
-                android:padding="6dp"
+                android:padding="8dp"
+                android:background="#FFF3E0"
                 android:gravity="center_vertical"
-                android:layout_marginTop="6dp">
-                
-                <TextView
-                    android:id="@+id/txtCurrentSimTime"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="🕒 2026-03-01"
-                    android:textStyle="bold"
-                    android:textColor="@color/accent_warning"
-                    android:textSize="12sp" />
-                
-                <Button android:id="@+id/btnTimePlus1D" android:layout_width="wrap_content" android:layout_height="28dp" android:text="+1天" android:textSize="11sp" android:minHeight="0dp" android:minWidth="40dp" android:background="#FFFFFF" android:layout_marginEnd="4dp" />
-                <Button android:id="@+id/btnTimePlus1W" android:layout_width="wrap_content" android:layout_height="28dp" android:text="+1周" android:textSize="11sp" android:minHeight="0dp" android:minWidth="40dp" android:background="#FFFFFF" android:layout_marginEnd="4dp" />
-                <Button android:id="@+id/btnTimePlus1M" android:layout_width="wrap_content" android:layout_height="28dp" android:text="+1月" android:textSize="11sp" android:minHeight="0dp" android:minWidth="40dp" android:background="#FFFFFF" android:layout_marginEnd="4dp" />
+                android:visibility="gone">
+                <TextView android:id="@+id/txtCurrentSimTime" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="🕒 模拟时间: 2024-01-01" android:textSize="12sp" android:textColor="#E65100" />
+                <Button android:id="@+id/btnTimePlus1D" android:layout_width="wrap_content" android:layout_height="28dp" android:text="+1天" android:textSize="11sp" android:minHeight="0dp" android:minWidth="50dp" android:layout_marginRight="4dp" />
+                <Button android:id="@+id/btnTimePlus1W" android:layout_width="wrap_content" android:layout_height="28dp" android:text="+1周" android:textSize="11sp" android:minHeight="0dp" android:minWidth="50dp" android:layout_marginRight="4dp" />
+                <Button android:id="@+id/btnTimePlus1M" android:layout_width="wrap_content" android:layout_height="28dp" android:text="+1月" android:textSize="11sp" android:minHeight="0dp" android:minWidth="50dp" android:layout_marginRight="4dp" />
                 <Button android:id="@+id/btnTimeReset" android:layout_width="wrap_content" android:layout_height="28dp" android:text="回到今天" android:textSize="11sp" android:minHeight="0dp" android:minWidth="60dp" android:background="@color/accent_danger_bg" android:textColor="@color/accent_danger" />
+            </LinearLayout>
+
+            <!-- Search and Sort Bar -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
+                android:paddingBottom="8dp"
+                android:gravity="center_vertical"
+                android:background="#FFFFFF">
+
+                <EditText
+                    android:id="@+id/searchEditText"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:hint="🔍 搜索食品名称/备注..."
+                    android:textSize="14sp"
+                    android:paddingLeft="12dp"
+                    android:background="@drawable/bg_search_input"
+                    android:singleLine="true" />
+
+                <ImageButton
+                    android:id="@+id/btnSort"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginLeft="8dp"
+                    android:src="@drawable/ic_sort"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:scaleType="centerInside"
+                    android:contentDescription="Sort" />
             </LinearLayout>
         </LinearLayout>
 
@@ -184,7 +208,7 @@
         android:layout_alignParentBottom="true"
         android:layout_marginRight="8dp"
         android:layout_marginBottom="4dp"
-        android:text="v1.2.16-Blue"
+        android:text="v1.2.17-Blue"
         android:textSize="10sp"
         android:textColor="@color/text_hint" />
 

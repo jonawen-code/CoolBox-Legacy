@@ -1,3 +1,4 @@
+// Build: 2.0.0
 package com.example.coolbox.data
 
 import androidx.lifecycle.LiveData
@@ -20,4 +21,9 @@ class FoodRepository(private val foodDao: FoodDao) {
     suspend fun migrateCategory(oldCategory: String, newCategory: String) {
         foodDao.updateCategory(oldCategory, newCategory)
     }
+
+    suspend fun migrateEmptyIcons(defaultIcon: String, timestamp: Long) {
+        foodDao.migrateEmptyIcons(defaultIcon, timestamp)
+    }
 }
+

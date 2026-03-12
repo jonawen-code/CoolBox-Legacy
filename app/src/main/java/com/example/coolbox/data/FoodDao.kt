@@ -1,3 +1,4 @@
+// Build: 2.0.0
 package com.example.coolbox.data
 
 import androidx.lifecycle.LiveData
@@ -22,6 +23,9 @@ interface FoodDao {
 
     @Query("UPDATE food_items SET isDeleted = 1, lastModifiedMs = :timestamp WHERE id = :id")
     suspend fun softDelete(id: String, timestamp: Long)
+
+    @Query("UPDATE food_items SET icon = :defaultIcon, lastModifiedMs = :timestamp WHERE icon IS NULL OR icon = ''")
+    suspend fun migrateEmptyIcons(defaultIcon: String, timestamp: Long)
 
     @Delete
     suspend fun hardDelete(item: FoodEntity)

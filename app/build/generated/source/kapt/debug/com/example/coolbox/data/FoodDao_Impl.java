@@ -39,6 +39,8 @@ public final class FoodDao_Impl implements FoodDao {
 
   private final SharedSQLiteStatement __preparedStmtOfSoftDelete;
 
+  private final SharedSQLiteStatement __preparedStmtOfMigrateEmptyIcons;
+
   public FoodDao_Impl(RoomDatabase __db) {
     this.__db = __db;
     this.__insertionAdapterOfFoodEntity = new EntityInsertionAdapter<FoodEntity>(__db) {
@@ -181,6 +183,13 @@ public final class FoodDao_Impl implements FoodDao {
         return _query;
       }
     };
+    this.__preparedStmtOfMigrateEmptyIcons = new SharedSQLiteStatement(__db) {
+      @Override
+      public String createQuery() {
+        final String _query = "UPDATE food_items SET icon = ?, lastModifiedMs = ? WHERE icon IS NULL OR icon = ''";
+        return _query;
+      }
+    };
   }
 
   @Override
@@ -289,6 +298,34 @@ public final class FoodDao_Impl implements FoodDao {
         } finally {
           __db.endTransaction();
           __preparedStmtOfSoftDelete.release(_stmt);
+        }
+      }
+    }, continuation);
+  }
+
+  @Override
+  public Object migrateEmptyIcons(final String defaultIcon, final long timestamp,
+      final Continuation<? super Unit> continuation) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      public Unit call() throws Exception {
+        final SupportSQLiteStatement _stmt = __preparedStmtOfMigrateEmptyIcons.acquire();
+        int _argIndex = 1;
+        if (defaultIcon == null) {
+          _stmt.bindNull(_argIndex);
+        } else {
+          _stmt.bindString(_argIndex, defaultIcon);
+        }
+        _argIndex = 2;
+        _stmt.bindLong(_argIndex, timestamp);
+        __db.beginTransaction();
+        try {
+          _stmt.executeUpdateDelete();
+          __db.setTransactionSuccessful();
+          return Unit.INSTANCE;
+        } finally {
+          __db.endTransaction();
+          __preparedStmtOfMigrateEmptyIcons.release(_stmt);
         }
       }
     }, continuation);

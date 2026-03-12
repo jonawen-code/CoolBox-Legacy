@@ -79,7 +79,7 @@
                 android:id="@+id/syncEnabledSwitch"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="开启云端备份与远程同步"
+                android:text="远程同步与备份"
                 android:textSize="16sp"
                 android:textColor="#333333" />
 

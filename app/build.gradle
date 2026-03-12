@@ -10,8 +10,8 @@ android {
         applicationId "com.example.coolbox.legacy"
         minSdk 14
         targetSdk 33
-        versionCode 1
-        versionName "1.0-legacy"
+        versionCode 46
+        versionName "2.8.0-RC3"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         
@@ -26,6 +26,12 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug
+        }
+        applicationVariants.all { variant ->
+            variant.outputs.all {
+                outputFileName = "CoolBoxPad_v${variant.versionName}.apk"
+            }
         }
     }
     compileOptions {
@@ -44,8 +50,9 @@ dependencies {
     implementation 'com.google.android.material:material:1.7.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     
-    // Networking
+    // Networking & Serialization
     implementation 'com.squareup.okhttp3:okhttp:3.12.13'
+    implementation 'com.google.code.gson:gson:2.8.9' // Version: V2.0 (Downgraded for Legacy compatibility)
     
     // Lifecycle
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1"

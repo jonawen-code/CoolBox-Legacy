@@ -11,8 +11,8 @@
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 1,
-      "versionName": "1.0-legacy",
+      "versionCode": 46,
+      "versionName": "2.8.0-RC3",
       "outputFile": "AndroidManifest.xml"
     }
   ],

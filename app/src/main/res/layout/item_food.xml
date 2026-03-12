@@ -6,8 +6,7 @@
     android:layout_margin="8dp"
     app:cardCornerRadius="8dp"
     app:cardElevation="6dp"
-    app:cardPreventCornerOverlap="true"
-    app:cardUseCompatPadding="true">
+    app:cardPreventCornerOverlap="true">
 
     <!-- Inner container to support dynamic borders and background -->
     <LinearLayout
@@ -15,7 +14,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="8dp">
+        android:padding="12dp"
+        android:background="@drawable/bg_item_normal">
 
         <!-- Left: Info Area (Icon, Name, Qty, Details) -->
         <LinearLayout
@@ -33,9 +33,9 @@
 
                 <ImageView
                     android:id="@+id/itemIcon"
-                    android:layout_width="60dp"
-                    android:layout_height="60dp"
-                    android:layout_margin="10dp"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:layout_margin="8dp"
                     android:scaleType="centerInside"
                     android:src="@drawable/cat_meat" />
 

@@ -17,6 +17,6 @@ data class FoodEntity(
     val category: String,
     val unit: String,
     val remark: String = "",
-    val lastModifiedMs: Long = 0L,
+    val lastModifiedMs: Long = System.currentTimeMillis(),
     val isDeleted: Boolean = false
 )

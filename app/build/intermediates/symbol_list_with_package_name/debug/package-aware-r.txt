@@ -2562,6 +2562,7 @@ drawable bg_btn_rounded_error
 drawable bg_item_expired
 drawable bg_item_near
 drawable bg_item_normal
+drawable bg_search_input
 drawable border_expired
 drawable border_near_expiry
 drawable border_normal
@@ -2607,11 +2608,13 @@ drawable ic_food_lemon
 drawable ic_food_lettuce
 drawable ic_food_mango
 drawable ic_food_milk
+drawable ic_food_mussel
 drawable ic_food_onion
 drawable ic_food_pear
 drawable ic_food_pepper
 drawable ic_food_pork
 drawable ic_food_ribs
+drawable ic_food_shellfish
 drawable ic_food_shrimp
 drawable ic_food_strawberry
 drawable ic_food_tangerine
@@ -2629,6 +2632,7 @@ drawable ic_mtrl_checked_circle
 drawable ic_mtrl_chip_checked_black
 drawable ic_mtrl_chip_checked_circle
 drawable ic_mtrl_chip_close_circle
+drawable ic_sort
 drawable m3_appbar_background
 drawable m3_popupmenu_background_overlay
 drawable m3_radiobutton_ripple
@@ -2831,6 +2835,7 @@ id btnScaleUp
 id btnSettings
 id btnSimulateExpiring
 id btnSimulateExpiry
+id btnSort
 id btnSummary
 id btnTakeAll
 id btnTakeOne
@@ -2895,6 +2900,7 @@ id design_menu_item_action_area
 id design_menu_item_action_area_stub
 id design_menu_item_text
 id design_navigation_view
+id deviceSpinner
 id dialog_button
 id dimensions
 id direct
@@ -2947,7 +2953,6 @@ id foodList
 id forever
 id fragment_container_view_tag
 id fridgeListContainer
-id fridgeSpinner
 id fridgeTabs
 id frost
 id fullscreen_header
@@ -3124,6 +3129,7 @@ id scrollIndicatorDown
 id scrollIndicatorUp
 id scrollView
 id scrollable
+id searchEditText
 id search_badge
 id search_bar
 id search_button
@@ -3194,6 +3200,7 @@ id tag_window_insets_animation_callback
 id testFoodList
 id text
 id text2
+id textDirtyLocation
 id textEnd
 id textExpiryValue
 id textScaleValue
@@ -3254,6 +3261,7 @@ id wrap_content
 id wrap_content_constrained
 id x_left
 id x_right
+id zoneSpinner
 integer abc_config_activityDefaultDur
 integer abc_config_activityShortDur
 integer app_bar_elevation_anim_duration
@@ -3456,6 +3464,8 @@ layout notification_template_part_time
 layout select_dialog_item_material
 layout select_dialog_multichoice_material
 layout select_dialog_singlechoice_material
+layout spinner_dropdown_item_dark
+layout spinner_item_dark
 layout support_simple_spinner_dropdown_item
 mipmap ic_launcher
 mipmap ic_launcher_round

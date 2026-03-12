@@ -1,8 +1,10 @@
+// Version: V2.5
 package com.example.coolbox
 
 import android.os.Bundle
 import android.content.Intent
 import com.example.coolbox.legacy.R
+import com.example.coolbox.legacy.BuildConfig
 import com.example.coolbox.util.formatQuantity
 import android.widget.Button
 import android.widget.LinearLayout
@@ -29,6 +31,9 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var viewModel: MainViewModel
     private lateinit var adapter: FoodAdapter
+    private var searchQuery: String = ""
+    private var sortType: String = "EXPIRY" // NAME, EXPIRY, CATEGORY
+    private var isAscending: Boolean = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,6 +48,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         
+        findViewById<TextView>(R.id.txtAppVersion).text = "V2.8.0-RC3 (Build 46)"
         findViewById<View>(R.id.btnSettings).setOnClickListener {
             startActivity(Intent(this, SetupActivity::class.java))
         }
@@ -51,12 +57,34 @@ class MainActivity : AppCompatActivity() {
             android.widget.Toast.makeText(this, "正在刷新...", android.widget.Toast.LENGTH_SHORT).show()
             com.example.coolbox.util.CloudSyncManager.downloadDatabase(this, viewModel.syncServerUrl) { success ->
                 if (success) {
-                    val restartIntent = packageManager.getLaunchIntentForPackage(packageName)
-                    restartIntent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                    startActivity(restartIntent)
-                    Runtime.getRuntime().exit(0)
+                    // Centralized VM-driven state reset for V1.0 compliance
+                    viewModel.onSyncComplete()
+                    android.widget.Toast.makeText(this@MainActivity, "同步完成 (已跳转至汇总)", android.widget.Toast.LENGTH_SHORT).show()
+                } else {
+                    android.widget.Toast.makeText(this@MainActivity, "网络故障，请检查 NAS 设置", android.widget.Toast.LENGTH_LONG).show()
                 }
             }
+        }
+        
+        // Search & Sort Initialization
+        val searchEdit = findViewById<EditText>(R.id.searchEditText)
+        searchEdit.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                searchQuery = s?.toString() ?: ""
+                updateList(viewModel.allFood.value, viewModel.currentFridge.value)
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+
+        findViewById<View>(R.id.btnSort).setOnClickListener { view ->
+            val popup = androidx.appcompat.widget.PopupMenu(this, view)
+            popup.menu.add("按保质期排序 ${if (sortType == "EXPIRY") "✅" else ""}").setOnMenuItemClickListener { sortType = "EXPIRY"; updateList(viewModel.allFood.value, viewModel.currentFridge.value); true }
+            popup.menu.add("按名称排序 ${if (sortType == "NAME") "✅" else ""}").setOnMenuItemClickListener { sortType = "NAME"; updateList(viewModel.allFood.value, viewModel.currentFridge.value); true }
+            popup.menu.add("按分类排序 ${if (sortType == "CATEGORY") "✅" else ""}").setOnMenuItemClickListener { sortType = "CATEGORY"; updateList(viewModel.allFood.value, viewModel.currentFridge.value); true }
+            popup.menu.add("----------------")
+            popup.menu.add("切换升序/降序 (${if (isAscending) "当前: 升序" else "当前: 降序"})").setOnMenuItemClickListener { isAscending = !isAscending; updateList(viewModel.allFood.value, viewModel.currentFridge.value); true }
+            popup.show()
         }
 
         val fridgeTabsContainer = findViewById<LinearLayout>(R.id.fridgeTabs)
@@ -98,7 +126,7 @@ class MainActivity : AppCompatActivity() {
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         (56 * resources.displayMetrics.density).toInt()
                     )
-                    setOnClickListener { showAddFoodDialog(categoryName) }
+                    setOnClickListener { showAddOrEditFoodDialog(categoryToSelect = categoryName) }
                 }
                 quickEntryBar.addView(btn)
             }
@@ -203,7 +231,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         fab.setOnClickListener {
-            showAddFoodDialog()
+            showAddOrEditFoodDialog()
         }
 
         // Show Expiry Status Report on launch (simple way for legacy)
@@ -218,9 +246,49 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    private fun showAddFoodDialog(categoryToSelect: String? = null) {
+    // Version: V2.8.0-RC3 (Build 33)
+    private fun applySmartLinkage(category: String, item: String, deviceSpinner: Spinner, units: List<String>, unitSpinner: Spinner, allDevices: List<String>) {
+        if (allDevices.isEmpty()) return
+
+        val rawRec = viewModel.getRecommendedFridge(category, item)
+        if (rawRec.isNotEmpty()) {
+            val recDigit = viewModel.normalizeToDigit(rawRec)
+            // Build 33: Brute-force prefix match against device list
+            val matchedDeviceIdx = allDevices.indexOfFirst { device ->
+                recDigit.startsWith(viewModel.normalizeToDigit(device))
+            }
+
+            if (matchedDeviceIdx >= 0) {
+                val matchedDeviceName = allDevices[matchedDeviceIdx]
+                // Strip device name to get zone portion
+                val zoneStr = recDigit.removePrefix(viewModel.normalizeToDigit(matchedDeviceName)).replace("-", "").trim()
+
+                // Build 40: Move tag assignment inside post block to prevent race condition coverage
+                deviceSpinner.post {
+                    deviceSpinner.tag = if (zoneStr.isNotEmpty()) zoneStr else null
+                    if (deviceSpinner.selectedItemPosition == matchedDeviceIdx) {
+                        // Force zone refresh even when device hasn't changed
+                        deviceSpinner.onItemSelectedListener?.onItemSelected(deviceSpinner, null, matchedDeviceIdx, 0)
+                    } else {
+                        deviceSpinner.setSelection(matchedDeviceIdx)
+                    }
+                }
+            }
+        }
+
+        val defaultUnit = viewModel.getDefaultUnit(category, item)
+        val unitIdx = units.indexOf(defaultUnit)
+        if (unitIdx in units.indices) {
+            unitSpinner.post { unitSpinner.setSelection(unitIdx) }
+        }
+    }
+    // Version: V2.8.0-RC3 (Build 33)
+
+    private fun showAddOrEditFoodDialog(existingItem: FoodEntity? = null, categoryToSelect: String? = null) {
         val view = LayoutInflater.from(this).inflate(R.layout.dialog_add_food, null)
-        val fridgeSpinner = view.findViewById<Spinner>(R.id.fridgeSpinner)
+        val deviceSpinner = view.findViewById<Spinner>(R.id.deviceSpinner)
+        val zoneSpinner = view.findViewById<Spinner>(R.id.zoneSpinner)
+        val textDirtyLocation = view.findViewById<TextView>(R.id.textDirtyLocation)
         val categorySpinner = view.findViewById<Spinner>(R.id.categorySpinner)
         val itemSpinner = view.findViewById<Spinner>(R.id.itemSpinner)
         val editNewItemName = view.findViewById<EditText>(R.id.editNewItemName)
@@ -232,26 +300,91 @@ class MainActivity : AppCompatActivity() {
 
         val units = listOf("个", "kg", "斤", "袋", "盒", "瓶", "升")
 
-        // Setup Fridge Spinner (Use current fridge as default)
-        val fridges = viewModel.fridges.value ?: listOf("我的冰箱", "小冰柜")
-        val fridgeAdapter = android.widget.ArrayAdapter(this, android.R.layout.simple_spinner_item, fridges)
-        fridgeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        fridgeSpinner.adapter = fridgeAdapter
-        val currentFridgeIdx = fridges.indexOf(viewModel.currentFridge.value)
-        if (currentFridgeIdx >= 0) fridgeSpinner.setSelection(currentFridgeIdx)
+        // Setup Device & Zone Spinners (V2.2 Dynamic Mapping)
+        val deviceZoneMap = viewModel.deviceZoneMap.value ?: emptyMap()
+        val allDevices = deviceZoneMap.keys.toList().ifEmpty { listOf("我的冰箱", "小冰柜") }
+        val deviceAdapter = android.widget.ArrayAdapter(this, R.layout.spinner_item_dark, allDevices)
+        deviceAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item_dark)
+        deviceSpinner.adapter = deviceAdapter
+
+        val zoneAdapter = android.widget.ArrayAdapter(this, R.layout.spinner_item_dark, mutableListOf<String>())
+        zoneAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item_dark)
+        zoneSpinner.adapter = zoneAdapter
+
+        var isDirty = false
+        var originalDirtyLocation = ""
+
+        if (existingItem != null) {
+            val loc = existingItem.fridgeName.trim()
+            val parts = loc.split(" - ")
+            if (parts.size == 2 && allDevices.contains(parts[0]) && deviceZoneMap[parts[0]]?.contains(parts[1]) == true) {
+                val dIdx = allDevices.indexOf(parts[0])
+                if (dIdx >= 0) deviceSpinner.setSelection(dIdx)
+                // Zone selection will happen in onItemSelected of device
+            } else {
+                isDirty = true
+                originalDirtyLocation = loc
+                textDirtyLocation.visibility = View.VISIBLE
+                textDirtyLocation.text = "⚠️ 历史位置: $loc (旧配置已更迭，请确认或重选)"
+                // Set device to index -1 or 0 and wait for user
+            }
+        } else {
+            val currentFridgeIdx = allDevices.indexOf(viewModel.currentFridge.value)
+            if (currentFridgeIdx >= 0) deviceSpinner.setSelection(currentFridgeIdx)
+        }
+        deviceSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+    override fun onItemSelected(parent: android.widget.AdapterView<*>?, v: View?, position: Int, id: Long) {
+        val selectedDevice = allDevices[position]
+        val zones = deviceZoneMap[selectedDevice] ?: emptyList()
+
+        // 核心防御：判断是不是 Android 系统的“幽灵空跑初始化”
+        val isGhostEvent = zoneAdapter.count == zones.size && (0 until zones.size).all { zoneAdapter.getItem(it) == zones[it] }
+
+        if (!isGhostEvent) {
+            zoneAdapter.clear()
+            zoneAdapter.addAll(zones)
+            zoneAdapter.notifyDataSetChanged()
+        }
+
+        val pendingZone = deviceSpinner.tag as? String
+
+        if (pendingZone != null) {
+            val zIdx = zones.indexOfFirst { it.contains(pendingZone) || pendingZone.contains(it) }
+            if (zIdx >= 0) {
+                zoneSpinner.setSelection(zIdx)
+            } else if (!isGhostEvent) {
+                zoneSpinner.setSelection(0)
+            }
+            deviceSpinner.tag = null
+        } else {
+            // 🛑 如果是幽灵事件且没有 Tag，绝对不准重置为 0！保持刚算出的冷藏！
+            if (!isGhostEvent) {
+                zoneSpinner.setSelection(0)
+            }
+        }
+        
+        if (isDirty) { isDirty = false; textDirtyLocation.visibility = View.GONE }
+    }
+    override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+}
 
         val layoutRemark = view.findViewById<LinearLayout>(R.id.layoutRemark)
         val editRemark = view.findViewById<EditText>(R.id.editRemark)
 
         // Setup Category Spinner
         val categories = viewModel.getCatalogCategories()
-        val categoryAdapter = android.widget.ArrayAdapter(this, android.R.layout.simple_spinner_item, categories)
-        categoryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        val categoryAdapter = android.widget.ArrayAdapter(this, R.layout.spinner_item_dark, categories)
+        categoryAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item_dark)
         categorySpinner.adapter = categoryAdapter
         
-        categoryToSelect?.let { cat ->
-            val idx = categories.indexOf(cat).let { i -> if (i >= 0) i else categories.indexOfFirst { c -> c.contains(cat) || cat.contains(c) } }
-            if (idx >= 0) categorySpinner.setSelection(idx)
+        if (existingItem != null) {
+            val catIdx = categories.indexOf(existingItem.category)
+            if (catIdx >= 0) categorySpinner.setSelection(catIdx)
+        } else {
+            categoryToSelect?.let { cat ->
+                val idx = categories.indexOf(cat).let { i -> if (i >= 0) i else categories.indexOfFirst { c -> c.contains(cat) || cat.contains(c) } }
+                if (idx >= 0) categorySpinner.setSelection(idx)
+            }
         }
 
         // Setup Item Spinner (Dynamic)
@@ -261,9 +394,14 @@ class MainActivity : AppCompatActivity() {
                 val items = viewModel.getCatalogItems(selectedCategory).toMutableList()
                 items.add("新增...")
                 
-                val itemAdapter = android.widget.ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_item, items)
-                itemAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                val itemAdapter = android.widget.ArrayAdapter(this@MainActivity, R.layout.spinner_item_dark, items)
+                itemAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item_dark)
                 itemSpinner.adapter = itemAdapter
+
+                if (existingItem != null) {
+                    val itemIdx = items.indexOf(existingItem.name)
+                    if (itemIdx >= 0) itemSpinner.setSelection(itemIdx)
+                }
                 
                 itemSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(p: android.widget.AdapterView<*>?, v: View?, pos: Int, i: Long) {
@@ -273,40 +411,43 @@ class MainActivity : AppCompatActivity() {
                             editNewItemName.requestFocus()
                         } else {
                             layoutNewItemName.visibility = View.GONE
-                            
-                            // --- Smart Fridge Recommendation (Refined) ---
-                            val recommendedFridge = viewModel.getRecommendedFridge(selectedCategory, selectedItem)
-                            val fridgeIdx = fridges.indexOf(recommendedFridge)
-                            if (fridgeIdx >= 0) fridgeSpinner.setSelection(fridgeIdx)
-
-                            val defaultUnit = viewModel.getDefaultUnit(selectedCategory, selectedItem)
-                            val unitIdx = units.indexOf(defaultUnit)
-                            if (unitIdx >= 0) unitSpinner.setSelection(unitIdx)
+                            applySmartLinkage(selectedCategory, selectedItem, deviceSpinner, units, unitSpinner, allDevices)
                         }
                     }
                     override fun onNothingSelected(p: android.widget.AdapterView<*>?) {}
                 }
 
+                // Initial linkage trigger for the first item in the category list
+                // Build 28: HARDENED LINKAGE - Categorical selection immediately fires device/unit recommendation
+                if (items.isNotEmpty()) {
+                    applySmartLinkage(selectedCategory, items[0], deviceSpinner, units, unitSpinner, allDevices)
+                }
+                
                 // Always show remark field for all categories
                 layoutRemark.visibility = View.VISIBLE
 
-                // --- Smart Fridge Recommendation ---
-                val recommendedFridge = viewModel.getRecommendedFridge(selectedCategory, if (items.isNotEmpty()) items[0] else "")
-                val fridgeIdx = fridges.indexOf(recommendedFridge)
-                if (fridgeIdx >= 0) fridgeSpinner.setSelection(fridgeIdx)
-
-                // Smart Units: Auto-select based on category
-                val defaultUnit = viewModel.getDefaultUnit(selectedCategory, "")
-                val unitIdx = units.indexOf(defaultUnit)
-                if (unitIdx >= 0) unitSpinner.setSelection(unitIdx)
+                // Smart recommendation and units moved to item selection to avoid redundant/overwriting calls
             }
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
         }
 
         // Setup Unit Spinner
-        val unitAdapter = android.widget.ArrayAdapter(this, android.R.layout.simple_spinner_item, units)
-        unitAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        val unitAdapter = android.widget.ArrayAdapter(this, R.layout.spinner_item_dark, units)
+        unitAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item_dark)
         unitSpinner.adapter = unitAdapter
+        
+        if (existingItem != null) {
+            val uIdx = units.indexOf(existingItem.unit)
+            if (uIdx >= 0) unitSpinner.setSelection(uIdx)
+            editQuantity.setText(formatQuantity(existingItem.quantity))
+            editPortions.setText(existingItem.portions.toString())
+            editRemark.setText(existingItem.remark)
+            
+            // Set DatePicker
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = existingItem.expiryDateMs
+            datePicker.updateDate(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH))
+        }
 
         val textExpiryValue = view.findViewById<TextView>(R.id.textExpiryValue)
         
@@ -404,8 +545,9 @@ class MainActivity : AppCompatActivity() {
         updateCalendarSelection()
 
         androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(if (existingItem != null) "编辑食品" else "添加食品")
             .setView(view)
-            .setPositiveButton("添加") { _, _ ->
+            .setPositiveButton(if (existingItem != null) "确定" else "添加") { _, _ ->
                 val selectedInSpinner = itemSpinner.selectedItem?.toString() ?: ""
                 val fullItemName = if (selectedInSpinner == "新增...") {
                     editNewItemName.text.toString()
@@ -413,14 +555,14 @@ class MainActivity : AppCompatActivity() {
                     selectedInSpinner
                 }
                 
-                val targetFridge = fridgeSpinner.selectedItem?.toString() ?: viewModel.currentFridge.value ?: ""
+                val selectedDevice = deviceSpinner.selectedItem?.toString() ?: ""
+                val selectedZone = zoneSpinner.selectedItem?.toString() ?: ""
+                val targetLocation = if (isDirty) originalDirtyLocation else "$selectedDevice - $selectedZone"
+                
                 val qtyStr = editQuantity.text.toString()
                 val qty = if (qtyStr.isEmpty()) 1.0 else (qtyStr.toDoubleOrNull() ?: 1.0)
-                
-                // RESTORE: Extract portions from input
                 val portionsStr = editPortions.text.toString()
                 val portions = if (portionsStr.isEmpty()) 1 else (portionsStr.toIntOrNull() ?: 1)
-                
                 val unit = unitSpinner.selectedItem.toString()
                 
                 val calendar = Calendar.getInstance()
@@ -432,11 +574,27 @@ class MainActivity : AppCompatActivity() {
                 val expiryMs = calendar.timeInMillis
 
                 if (fullItemName.isNotEmpty()) {
-                    val name = fullItemName
                     val category = categorySpinner.selectedItem.toString()
-                    val icon = viewModel.getIconForItem(name)
                     val remark = editRemark.text.toString()
-                    viewModel.addFood(name, icon, category, qty, unit, expiryMs, portions, targetFridge, remark)
+                    
+                    if (existingItem != null) {
+                        val updated = existingItem.copy(
+                            name = fullItemName,
+                            icon = if (fullItemName == existingItem.name) existingItem.icon else viewModel.getIconForItem(fullItemName),
+                            category = category,
+                            quantity = qty,
+                            unit = unit,
+                            expiryDateMs = expiryMs,
+                            portions = portions,
+                            fridgeName = targetLocation,
+                            remark = remark,
+                            lastModifiedMs = viewModel.nowMs()
+                        )
+                        viewModel.updateItem(updated)
+                    } else {
+                        val icon = viewModel.getIconForItem(fullItemName)
+                        viewModel.addFood(fullItemName, icon, category, qty, unit, expiryMs, portions, targetLocation, remark)
+                    }
                 }
             }
             .setNegativeButton("取消", null)
@@ -458,8 +616,8 @@ class MainActivity : AppCompatActivity() {
         )
         
         val grid = android.widget.GridLayout(this).apply {
-            columnCount = 4
-            rowCount = (iconList.size + 3) / 4
+            columnCount = 5
+            rowCount = (iconList.size + 4) / 5
             setPadding(16, 16, 16, 16)
         }
         
@@ -473,9 +631,9 @@ class MainActivity : AppCompatActivity() {
                 val resId = resources.getIdentifier(iconName, "drawable", packageName)
                 if (resId != 0) setImageResource(resId)
                 layoutParams = android.widget.GridLayout.LayoutParams().apply {
-                    width = (80 * resources.displayMetrics.density).toInt()
-                    height = (80 * resources.displayMetrics.density).toInt()
-                    setMargins(8, 8, 8, 8)
+                    width = (64 * resources.displayMetrics.density).toInt()
+                    height = (64 * resources.displayMetrics.density).toInt()
+                    setMargins(4, 4, 4, 4)
                 }
                 scaleType = ImageView.ScaleType.CENTER_INSIDE
                 setOnClickListener {
@@ -489,14 +647,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showItemActionDialog(entity: FoodEntity) {
-        val options = arrayOf("仅拿走 1 份", "拿走多份...", "转移到其他冰箱")
+        val options = arrayOf("编辑信息", "仅拿走 1 份", "拿走多份...", "转移到其他冰箱")
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle(entity.name)
             .setItems(options) { _, which ->
                 when (which) {
-                    0 -> viewModel.takePortion(entity)
-                    1 -> showTakePortionDialog(entity)
-                    2 -> showTransferDialog(entity)
+                    0 -> showAddOrEditFoodDialog(entity)
+                    1 -> viewModel.takePortion(entity)
+                    2 -> showTakePortionDialog(entity)
+                    3 -> showTransferDialog(entity)
                 }
             }
             .show()
@@ -580,13 +739,19 @@ class MainActivity : AppCompatActivity() {
         val msg = StringBuilder()
         if (expired.isNotEmpty()) {
             msg.append("⚠️ 已过期 (${expired.size}件):\n")
-            expired.take(3).forEach { msg.append("- ${it.icon}${it.name}\n") }
+            expired.take(3).forEach { 
+                val cleanIcon = viewModel.getDisplayName(it.icon)
+                msg.append("• ${it.name} (${cleanIcon})\n") 
+            }
             if (expired.size > 3) msg.append("...等\n")
         }
         if (expiring.isNotEmpty()) {
             if (msg.isNotEmpty()) msg.append("\n")
             msg.append("🕒 即将过期 (${expiring.size}件):\n")
-            expiring.take(3).forEach { msg.append("- ${it.icon}${it.name}\n") }
+            expiring.take(3).forEach { 
+                val cleanIcon = viewModel.getDisplayName(it.icon)
+                msg.append("• ${it.name} (${cleanIcon})\n") 
+            }
             if (expiring.size > 3) msg.append("...等\n")
         }
 
@@ -599,13 +764,34 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateList(allFood: List<FoodEntity>?, currentFridge: String?) {
         if (allFood != null) {
-            val filtered = if (currentFridge == null) {
+            var filtered = if (currentFridge == null) {
                 allFood 
             } else {
-                // Filter by prefix or exact match to support "DeviceName" tab showing "DeviceName Level 1"
-                allFood.filter { it.fridgeName == currentFridge || it.fridgeName.startsWith("$currentFridge ") }
+                // Robust filter: match exact, prefix, or normalized (ignore spaces)
+                val normalizedCurrent = currentFridge.replace(" ", "")
+                allFood.filter { 
+                    it.fridgeName == currentFridge || 
+                    it.fridgeName.startsWith("$currentFridge ") ||
+                    it.fridgeName.replace(" ", "") == normalizedCurrent
+                }
             }
-            adapter.submitList(filtered)
+
+            // Apply Search Filter
+            if (searchQuery.isNotBlank()) {
+                filtered = filtered.filter { 
+                    it.name.contains(searchQuery, ignoreCase = true) || 
+                    it.remark.contains(searchQuery, ignoreCase = true) 
+                }
+            }
+
+            // Apply Sorting
+            val sorted = when (sortType) {
+                "NAME" -> if (isAscending) filtered.sortedBy { it.name } else filtered.sortedByDescending { it.name }
+                "CATEGORY" -> if (isAscending) filtered.sortedBy { it.category } else filtered.sortedByDescending { it.category }
+                else -> if (isAscending) filtered.sortedBy { it.expiryDateMs } else filtered.sortedByDescending { it.expiryDateMs }
+            }
+
+            adapter.submitList(sorted)
         }
     }
 
@@ -724,7 +910,8 @@ class MainActivity : AppCompatActivity() {
             holder.remark.textSize = 14f * scale
             holder.location.textSize = 14f * scale
 
-            holder.name.text = item.name
+            // Build 29: Render clean display name, strip ic_food_ / cat_ prefixes
+            holder.name.text = (holder.itemView.context as MainActivity).viewModel.getDisplayName(item.name)
             val df = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
             val dateStr = "至 ：" + df.format(Date(item.expiryDateMs))
             holder.detail.text = dateStr
@@ -738,7 +925,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 holder.remark.text = " " // Stable empty line for height consistency
             }
-            // Show full device location, shortened for readability
+            // Build 44: 保持与底层数据及其他对话框完全一致的显示格式，不遮蔽横杠
             val shortLoc = item.fridgeName.replace("室", "").replace("第", "")
             holder.location.text = "在：$shortLoc"
 
