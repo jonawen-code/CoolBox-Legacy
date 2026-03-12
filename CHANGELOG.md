@@ -2,6 +2,13 @@
 
 All notable changes to the CoolBox project will be documented in this file.
 
+## [V2.9.0-RC3] - 2026-03-12
+### 架构重构 (Architecture Refactoring)
+- **核心控制器瘦身**: 对 `MainActivity` 进行物理拆分，移除超 500 行非核心代码，回归纯粹调度中心。
+- **渲染层解耦**: 剥离 `FoodAdapter` 至独立文件，UI 状态独立闭环。
+- **交互模块化**: 新建 `FoodActionHelper`，封装基础交互弹窗。
+- **重逻辑剥离**: 新建 `FoodEditHelper`，完美剥离复杂“食品添加/编辑”弹窗，无损平移幽灵风暴防御 (Ghost Defense) 与专家系统规则。
+
 ## [1.2.16] - 2026-03-04
 ### Changed
 - **分类图标精简 (Category Icon Cleanup)**：移除"熟食剩菜"分类前的 Emoji 图标，使分类名称更简洁。
