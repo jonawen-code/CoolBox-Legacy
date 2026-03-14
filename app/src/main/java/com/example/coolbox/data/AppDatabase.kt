@@ -1,3 +1,4 @@
+// Version: V3.0.0-Pre21
 package com.example.coolbox.data
 
 import android.content.Context
@@ -5,7 +6,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [FoodEntity::class], version = 6, exportSchema = false)
+@Database(entities = [FoodEntity::class], version = 7, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun foodDao(): FoodDao
 
@@ -28,6 +29,15 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_6_7 = object : androidx.room.migration.Migration(6, 7) {
+            override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // V3.0.0-Pre10 Enforcement: Re-verify or reinforce column
+                // SQLite doesn't have "IF NOT EXISTS" for ADD COLUMN, but we can check or just do a safe op
+                // For now, we'll just log or do a dummy op to trigger the version bump
+                database.execSQL("UPDATE food_items SET isDeleted = 0 WHERE isDeleted IS NULL")
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -43,7 +53,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "coolbox_database"
                 )
-                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                 .fallbackToDestructiveMigration()
                 .build()
                 @Suppress("UNCHECKED_CAST")
@@ -73,10 +83,10 @@ abstract class AppDatabase : RoomDatabase() {
                 android.util.Log.d("CoolBox", "DB Exported to: ${exportFile.absolutePath}")
                 
                 // Trigger Cloud Sync if enabled
-                val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                val prefs = context.getSharedPreferences("coolbox_prefs", Context.MODE_PRIVATE)
                 val isSyncEnabled = prefs.getBoolean("sync_enabled", false)
                 if (isSyncEnabled) {
-                    val serverUrl = prefs.getString("sync_server_url", "http://192.168.31.94:3000/coolbox") ?: "http://192.168.31.94:3000/coolbox"
+                    val serverUrl = prefs.getString("sync_server_url", "http://192.168.31.94:3001/coolbox") ?: "http://192.168.31.94:3001/coolbox"
                     com.example.coolbox.util.CloudSyncManager.uploadDatabase(context, serverUrl)
                 }
             } catch (e: Exception) {
@@ -85,3 +95,4 @@ abstract class AppDatabase : RoomDatabase() {
         }
     }
 }
+// Version: V3.0.0-Pre7

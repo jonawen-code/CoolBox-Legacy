@@ -1,3 +1,4 @@
+// Version: V3.0.0-Pre21
 package com.example.coolbox.data
 
 import androidx.room.Entity
@@ -20,3 +21,4 @@ data class FoodEntity(
     val lastModifiedMs: Long = System.currentTimeMillis(),
     val isDeleted: Boolean = false
 )
+// Version: V3.0.0-Pre9

@@ -30,42 +30,97 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="32dp"
-            android:text="设置您的存储设备"
+            android:text="请选择入驻方式"
             android:textStyle="bold"
             android:textColor="#333333" />
 
-        <!-- Dynamic Container for Device Rows -->
         <LinearLayout
-            android:id="@+id/fridgeListContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="16dp"
+            android:weightSum="2">
+
+            <Button
+                android:id="@+id/btnStartNew"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="开启全新体验"
+                android:background="#E3F2FD"
+                android:textColor="#2196F3" />
+
+            <Button
+                android:id="@+id/btnTakeover"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="接管已有仓库"
+                android:background="#FFF3E0"
+                android:textColor="#FF9800" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/setupContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginTop="8dp" />
+            android:visibility="gone">
 
-        <Button
-            android:id="@+id/btnAddFridge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="+ 添加新设备"
-            android:textSize="14sp"
-            android:textColor="#2196F3"
-            android:background="?android:attr/selectableItemBackground"
-            android:layout_marginTop="4dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="分类设置（如：蔬菜、肉类、饮料）"
-            android:textStyle="bold"
-            android:textColor="#333333" />
-
-        <EditText
-            android:id="@+id/categoryInput"
+        <LinearLayout
+            android:id="@+id/sectionStorageSettings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="多个分类用逗号分隔"
-            android:text="🥦 蔬菜水果, 🥩 肉蛋水产, 🥛 奶品饮料, 🥫 零食速食, 熟食剩菜" />
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:text="设置您的存储设备"
+                android:textStyle="bold"
+                android:textColor="#333333" />
+
+            <!-- Dynamic Container for Device Rows -->
+            <LinearLayout
+                android:id="@+id/fridgeListContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="8dp" />
+
+            <Button
+                android:id="@+id/btnAddFridge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="+ 添加新设备"
+                android:textSize="14sp"
+                android:textColor="#2196F3"
+                android:background="?android:attr/selectableItemBackground"
+                android:layout_marginTop="4dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/sectionCategorySettings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="分类设置（如：蔬菜、肉类、饮料）"
+                android:textStyle="bold"
+                android:textColor="#333333" />
+
+            <EditText
+                android:id="@+id/categoryInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="多个分类用逗号分隔"
+                android:text="🥦 蔬菜水果, 🥩 肉蛋水产, 🥛 奶品饮料, 🥫 零食速食, 熟食剩菜" />
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -84,6 +139,7 @@
                 android:textColor="#333333" />
 
             <TextView
+                android:id="@+id/txtSyncHint"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
@@ -99,7 +155,18 @@
                 android:hint="云端服务器地址 (如: https://your-nas.com)"
                 android:textSize="14sp"
                 android:visibility="gone"
-                android:text="http://192.168.31.94:3000/coolbox" />
+                android:text="http://192.168.31.94:3001/coolbox" />
+
+            <TextView
+                android:id="@+id/txtTakeoverHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="连接成功后，将自动从云端下载您的所有配置和数据。"
+                android:textSize="12sp"
+                android:textColor="#FF9800"
+                android:visibility="gone" />
+
         </LinearLayout>
 
         <Button
@@ -110,6 +177,8 @@
             android:text="完成设置"
             android:background="#2196F3"
             android:textColor="#FFFFFF" />
+
+        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>

@@ -1,4 +1,4 @@
-// Version: V2.8.0-RC3 (Build 46) Pad Optimization Pack - Ghost Initialization Defense
+// Version: V3.0.0-Pre21
 package com.example.coolbox.ui
 
 import android.app.Application
@@ -9,6 +9,8 @@ import com.example.coolbox.data.AppDatabase
 import com.example.coolbox.data.FoodEntity
 import com.example.coolbox.data.FoodRepository
 import kotlinx.coroutines.launch
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import java.util.UUID
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -62,9 +64,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: FoodRepository = (application as CoolBoxApplication).repository
     
     val allFood: LiveData<List<FoodEntity>> = repository.allItems
+    
+    private val gson = Gson()
 
     // Simplified SharedPreferences management for legacy
-    private val prefs = application.getSharedPreferences("settings", Application.MODE_PRIVATE)
+    private val prefs = application.getSharedPreferences("coolbox_prefs", Application.MODE_PRIVATE)
 
     private val _fridges = MutableLiveData<List<String>>()
     val fridges: LiveData<List<String>> = _fridges
@@ -92,7 +96,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun nowMs(): Long = System.currentTimeMillis() + (_timeOffsetMs.value ?: 0L)
 
     // Default sync URL for development/demo
-    var syncServerUrl: String = "http://192.168.31.94:3000/coolbox"
+    var syncServerUrl: String = "http://192.168.31.94:3001/coolbox"
     
     private val _syncEnabled = MutableLiveData<Boolean>(false)
     val syncEnabled: LiveData<Boolean> = _syncEnabled
@@ -105,6 +109,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
 
     fun getIconForItem(name: String): String {
+        // Version: V3.0.0-Pre3 (Global Icon Brain)
+        if (name.contains("蛋")) {
+            return "ic_food_egg"
+        }
         val found = _iconMap.entries.find { name.contains(it.key) }?.value
         return if (found.isNullOrBlank()) com.example.coolbox.util.Constants.ICON_DEFAULT else found
     }
@@ -263,23 +271,46 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun loadSettings() {
         _syncEnabled.value = prefs.getBoolean("sync_enabled", false)
-        syncServerUrl = prefs.getString("sync_server_url", "http://192.168.31.94:3000/coolbox") ?: "http://192.168.31.94:3000/coolbox"
+        syncServerUrl = prefs.getString("sync_server_url", "http://192.168.31.94:3001/coolbox") ?: "http://192.168.31.94:3001/coolbox"
         
-        val fridgeSet = prefs.getStringSet("fridges", setOf("我的冰箱", "小冰柜"))
-        // Build 30: Normalize ALL stored names to digit format on load
-        val fridgesList = (fridgeSet?.toList() ?: listOf("我的冰箱", "小冰柜"))
-            .map { normalizeToDigit(it) }
-            .sortedNaturally()
-        _fridges.value = fridgesList
-        // Write back normalized names to persist the cleanup
-        prefs.edit().putStringSet("fridges", fridgesList.toSet()).apply()
+        // --- 兼容性读取 Fridges 开始 ---
+        val fridgesList = try {
+            // 1. 尝试按 JSON 字符串读取
+            val json = prefs.getString("fridges", null)
+            if (json != null) {
+                gson.fromJson<List<String>>(json, object : TypeToken<List<String>>() {}.type)
+            } else {
+                // 2. 如果没有 JSON，尝试按旧版 StringSet 读取
+                prefs.getStringSet("fridges", setOf("我的冰箱", "小冰柜"))?.toList()
+            }
+        } catch (e: Exception) {
+            // 3. 如果类型冲突报错，强制按 StringSet 再次尝试
+            prefs.getStringSet("fridges", setOf("我的冰箱", "小冰柜"))?.toList()
+        } ?: listOf("我的冰箱", "小冰柜")
+        
+        val normalizedFridges = fridgesList.map { normalizeToDigit(it) }.sortedNaturally()
+        _fridges.value = normalizedFridges
+        // --- 兼容性读取 Fridges 结束 ---
 
-        val baseSet = prefs.getStringSet("fridge_bases", emptySet())
-        val basesList = (baseSet?.toList() ?: listOf("我的冰箱", "小冰柜"))
-            .map { normalizeToDigit(it) }
-            .sortedNaturally()
-        _fridgeBases.value = basesList
-        prefs.edit().putStringSet("fridge_bases", basesList.toSet()).apply()
+        // --- 兼容性读取 Fridge Bases 开始 ---
+        val basesList = try {
+            val json = prefs.getString("fridge_bases", null)
+            if (json != null) {
+                gson.fromJson<List<String>>(json, object : TypeToken<List<String>>() {}.type)
+            } else {
+                prefs.getStringSet("fridge_bases", emptySet())?.toList()
+            }
+        } catch (e: Exception) {
+            prefs.getStringSet("fridge_bases", emptySet())?.toList()
+        } ?: listOf("我的冰箱", "小冰柜")
+
+        val normalizedBases = basesList.map { normalizeToDigit(it) }.sortedNaturally()
+        _fridgeBases.value = normalizedBases
+        // --- 兼容性读取 Fridge Bases 结束 ---
+
+        // Write back normalized names in JSON format to standardize for Pre17
+        prefs.edit().putString("fridges", gson.toJson(normalizedFridges)).apply()
+        prefs.edit().putString("fridge_bases", gson.toJson(normalizedBases)).apply()
 
         // Category order: ALWAYS use _catalog key order as the single source of truth.
         val catalogKeys = _catalog.keys.toList()
@@ -324,7 +355,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return digitMatch?.groupValues?.get(1)?.toIntOrNull()
     }
     private val _currentFridge = MutableLiveData<String?>()
-    private val appVersion: LiveData<String> = MutableLiveData("V2.8.0-RC3 (Build 31)")
+    private val appVersion: LiveData<String> = MutableLiveData("V3.0.0-Pre21")
     val currentFridge: LiveData<String?> = _currentFridge
 
     fun refreshState(keepSummary: Boolean = false) {
@@ -335,6 +366,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             _currentFridge.value = _fridges.value?.firstOrNull() ?: ""
         }
+    }
+
+    fun refreshSettings() {
+        loadSettings()
     }
 
     fun onSyncComplete() {
@@ -527,3 +562,4 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 }
+// Version: V3.0.0-Pre21

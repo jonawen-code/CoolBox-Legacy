@@ -1,4 +1,4 @@
-// Build: 2.0.0
+// Version: V3.0.0-Pre21
 package com.example.coolbox.data
 
 import androidx.lifecycle.LiveData
@@ -26,4 +26,5 @@ class FoodRepository(private val foodDao: FoodDao) {
         foodDao.migrateEmptyIcons(defaultIcon, timestamp)
     }
 }
+// Version: V3.0.0-Pre9
 

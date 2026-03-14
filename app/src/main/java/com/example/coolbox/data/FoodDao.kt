@@ -1,4 +1,5 @@
 // Build: 2.0.0
+// Version: V3.0.0-Pre21
 package com.example.coolbox.data
 
 import androidx.lifecycle.LiveData
@@ -30,3 +31,4 @@ interface FoodDao {
     @Delete
     suspend fun hardDelete(item: FoodEntity)
 }
+// Version: V3.0.0-Pre21
