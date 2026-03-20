@@ -1,4 +1,4 @@
-// Version: V3.0.0-Pre21
+// Version: V3.0.0-Pre22
 package com.example.coolbox.data
 
 import androidx.lifecycle.LiveData

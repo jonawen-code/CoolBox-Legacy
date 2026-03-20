@@ -1,4 +1,4 @@
-// Version: V3.0.0-Pre21
+// Version: V3.0.0-Pre22
 package com.example.coolbox.ui
 
 import android.app.Application
@@ -15,7 +15,7 @@ import java.util.UUID
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _catalog = linkedMapOf(
-        "肉蛋水产" to listOf("牛肉", "猪肉", "排骨", "鸡", "鸭", "鱼", "虾", "蟹", "鸡蛋", "鸭蛋"),
+        "肉蛋水产" to listOf("牛肉", "猪肉", "羊肉", "排骨", "鸡", "鸭", "鱼", "虾", "蟹", "鸡蛋", "鸭蛋"),
         "奶品饮料" to listOf("鲜奶", "黄油", "奶酪", "橙汁", "柠檬汁", "汽水", "啤酒"),
         "速冻食品" to listOf("水饺", "汤圆", "冻榴莲果肉"),
         "蔬菜水果" to listOf("苹果", "橙", "蓝莓", "草莓", "西瓜", "番茄", "辣椒", "白菜", "菜心", "绿叶菜"),
@@ -26,10 +26,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         "牛肉" to "ic_food_beef",
         "猪肉" to "ic_food_pork",
         "排骨" to "ic_food_ribs",
+        "羊肉" to "ic_food_lamb",
         "鸡" to "ic_food_chicken",
         "鱼" to "ic_food_fish",
         "虾" to "ic_food_shrimp",
         "蟹" to "ic_food_crab",
+        "腊肠" to "ic_food_sausages",
+        "腊肉" to "ic_food_sausages",
         "水饺" to "ic_food_dumpling",
         "汤圆" to "ic_food_dumpling",
         "冻榴莲果肉" to "ic_food_durian",
@@ -42,6 +45,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         "啤酒" to "ic_food_beer",
         "苹果" to "ic_food_apple",
         "橙" to "ic_food_tangerine",
+        "冰淇凌" to "ic_food_icecream",
         "蓝莓" to "ic_food_blueberries",
         "草莓" to "ic_food_strawberry",
         "西瓜" to "ic_food_watermelon",
@@ -50,7 +54,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         "白菜" to "ic_food_lettuce",
         "菜心" to "ic_food_broccoli",
         "绿叶菜" to "ic_food_lettuce",
-        "剩菜" to "ic_food_cooked"
+        "剩菜" to "ic_food_cooked",
+        "酱料" to "ic_food_jam",
+        "果酱" to "ic_food_jam",
+        "调味品" to "ic_food_jam",
+        "贝类" to "ic_food_shellfish"
     )
 
     private val _unitMap = mapOf(
@@ -355,7 +363,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return digitMatch?.groupValues?.get(1)?.toIntOrNull()
     }
     private val _currentFridge = MutableLiveData<String?>()
-    private val appVersion: LiveData<String> = MutableLiveData("V3.0.0-Pre21")
+    private val appVersion: LiveData<String> = MutableLiveData("V3.0.0-Pre22")
     val currentFridge: LiveData<String?> = _currentFridge
 
     fun refreshState(keepSummary: Boolean = false) {
@@ -422,7 +430,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addFood(name: String, icon: String, category: String, quantity: Double, unit: String, expiryMs: Long, portions: Int = 1, targetFridge: String? = null, remark: String = "") {
-        viewModelScope.launch {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val fridge = targetFridge ?: _currentFridge.value ?: ""
             val weightPerPortion = if (portions > 0) quantity / portions else quantity
             
@@ -476,7 +484,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun takePortions(entity: FoodEntity, amount: Int) {
-        viewModelScope.launch {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             if (entity.portions > amount) {
                 val updated = entity.copy(
                     portions = Math.max(0, entity.portions - amount),
@@ -492,7 +500,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun transferItem(entity: FoodEntity, targetFridge: String, portionsToTransfer: Int = -1) {
-        viewModelScope.launch {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val p = if (portionsToTransfer <= 0) entity.portions else portionsToTransfer
             
             if (p >= entity.portions) {
@@ -524,7 +532,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateFoodIcon(entity: FoodEntity, newIcon: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val updated = entity.copy(icon = newIcon)
             repository.insertItem(updated)
             AppDatabase.exportDatabase(getApplication())
@@ -532,7 +540,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateItem(entity: FoodEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             repository.insertItem(entity)
             saveCustomItemToCatalog(entity.category, entity.name) // Build 37: Remember user-added items
             AppDatabase.exportDatabase(getApplication())
@@ -540,26 +548,43 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun migrateCategory(oldCategory: String, newCategory: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             repository.migrateCategory(oldCategory, newCategory)
             AppDatabase.exportDatabase(getApplication())
         }
     }
 
     fun deleteFood(entity: FoodEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val dao = AppDatabase.getDatabase(getApplication()).foodDao()
             dao.softDelete(entity.id, nowMs())
             AppDatabase.exportDatabase(getApplication())
         }
     }
 
+    fun forceSyncAndHealDatabase(onComplete: (Boolean, String) -> Unit) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                // 1. Export local database to sync.db file
+                AppDatabase.exportDatabase(getApplication())
+                
+                // 2. Upload file blindly to NAS
+                val url = syncServerUrl
+                com.example.coolbox.util.CloudSyncManager.forceUploadDatabaseFile(getApplication(), url) { success, msg ->
+                    onComplete(success, msg)
+                }
+            } catch (e: Exception) {
+                onComplete(false, "本地自愈导出失败: ${e.message}")
+            }
+        }
+    }
+
     init {
         loadSettings()
-        viewModelScope.launch {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             repository.migrateEmptyIcons("ic_food_default", System.currentTimeMillis())
             AppDatabase.exportDatabase(getApplication())
         }
     }
 }
-// Version: V3.0.0-Pre21
+// Version: V3.0.0-Pre22

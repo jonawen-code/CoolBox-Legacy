@@ -22,7 +22,7 @@ class FoodActionHelper(private val context: Context, private val viewModel: Main
             "ic_food_icecream", "ic_food_durian", "ic_food_blueberries", "ic_food_broccoli", "ic_food_butter",
             "ic_food_cheese", "ic_food_dumpling", "ic_food_green_apple", "ic_food_pepper",
             "ic_food_lemon", "ic_food_mango", "ic_food_pear", "ic_food_tangerine",
-            "ic_food_shellfish", "ic_food_mussel",
+            "ic_food_shellfish", "ic_food_mussel", "ic_food_sausages", "ic_food_jam", "ic_food_cooked",
             "cat_cooked", "cat_meat", "cat_veg", "cat_drink", "cat_snack"
         )
         

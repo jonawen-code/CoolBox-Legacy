@@ -1,4 +1,4 @@
-// Version: V3.0.0-Pre21
+// Version: V3.0.0-Pre22 (Self-Healing Integrated)
 package com.example.coolbox
 
 import android.os.Bundle
@@ -54,25 +54,47 @@ class MainActivity : AppCompatActivity() {
             return
         }
         
-        findViewById<TextView>(R.id.txtAppVersion).text = "V3.0.0-Pre21"
+        findViewById<TextView>(R.id.txtAppVersion).text = "V3.0.0-Pre22 (核武自愈版)"
         // Version: V3.0.0-Pre9
         findViewById<View>(R.id.btnSettings).setOnClickListener {
             startActivity(Intent(this, SetupActivity::class.java))
         }
         
+        // ----------------------------------------------------------------
+        // 1. 常规刷新 (单次点击)：从 NAS 拉取数据
+        // ----------------------------------------------------------------
         findViewById<View>(R.id.btnRefresh)?.setOnClickListener {
             android.widget.Toast.makeText(this, "正在刷新...", android.widget.Toast.LENGTH_SHORT).show()
-            com.example.coolbox.util.CloudSyncManager.downloadDatabase(this, viewModel.syncServerUrl) { success ->
-                if (success) {
-                    // Centralized VM-driven state reset for V1.0 compliance
-                    viewModel.onSyncComplete()
-                    android.widget.Toast.makeText(this@MainActivity, "同步完成 (已跳转至汇总)", android.widget.Toast.LENGTH_SHORT).show()
-                } else {
-                    android.widget.Toast.makeText(this@MainActivity, "网络故障，请检查 NAS 设置", android.widget.Toast.LENGTH_LONG).show()
+            com.example.coolbox.util.CloudSyncManager.downloadDatabase(this, viewModel.syncServerUrl) { success, _ ->
+                runOnUiThread {
+                    if (success) {
+                        // Centralized VM-driven state reset for V1.0 compliance
+                        viewModel.onSyncComplete()
+                        android.widget.Toast.makeText(this@MainActivity, "同步完成 (已跳转至汇总)", android.widget.Toast.LENGTH_SHORT).show()
+                    } else {
+                        android.widget.Toast.makeText(this@MainActivity, "网络故障，请检查 NAS 设置", android.widget.Toast.LENGTH_LONG).show()
+                    }
                 }
             }
         }
-        
+
+        // ================================================================
+        // 🚀 2. 隐藏的核武器 (长按)：触发数据自愈并强行推给 NAS
+        // ================================================================
+        findViewById<View>(R.id.btnRefresh)?.setOnLongClickListener {
+            android.widget.Toast.makeText(this, "⚠️ 启动核武级修复：提取活体数据、重建新库并强推...", android.widget.Toast.LENGTH_LONG).show()
+            
+            // 触发 MainViewModel 里刚写的自愈方法
+            viewModel.forceSyncAndHealDatabase { success, message ->
+                runOnUiThread {
+                    // 修复完成后弹窗通知结果
+                    android.widget.Toast.makeText(this@MainActivity, message as CharSequence, android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+            true // 返回 true 表示我们消费了这个长按事件，不会触发单击
+        }
+        // ================================================================
+
         // Search & Sort Initialization
         val searchEdit = findViewById<EditText>(R.id.searchEditText)
         searchEdit.addTextChangedListener(object : android.text.TextWatcher {
@@ -113,7 +135,9 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.btnScaleUp).setOnClickListener {
             viewModel.setFontScale((viewModel.fontScale.value ?: 1.0f) + 0.1f)
-        }        // Quick Entry Buttons - Dynamically generated from settings categories
+        }
+        
+        // Quick Entry Buttons - Dynamically generated from settings categories
         val quickEntryBar = findViewById<LinearLayout>(R.id.quickEntryBar)
         fun buildQuickButtons() {
             quickEntryBar.removeAllViews()
@@ -252,8 +276,6 @@ class MainActivity : AppCompatActivity() {
             }
         })
     }
-
-
 
     private fun showExpiryStatusReport(allFood: List<FoodEntity>) {
         val now = System.currentTimeMillis()
@@ -401,4 +423,3 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
-// Version: V3.0.0-Pre9

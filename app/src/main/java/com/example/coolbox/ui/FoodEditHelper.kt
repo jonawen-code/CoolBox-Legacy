@@ -334,7 +334,7 @@ class FoodEditHelper(private val context: Context, private val viewModel: MainVi
                     if (existingItem != null) {
                         val updated = existingItem.copy(
                             name = fullItemName,
-                            icon = if (fullItemName == existingItem.name) existingItem.icon else viewModel.getIconForItem(fullItemName),
+                            icon = viewModel.getIconForItem(fullItemName).ifEmpty { existingItem.icon },
                             category = category,
                             quantity = qty,
                             unit = unit,

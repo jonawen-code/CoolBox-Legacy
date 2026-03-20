@@ -1,4 +1,4 @@
-// Version: V3.0.0-Pre21
+// Version: V3.0.0-Pre22
 package com.example.coolbox
 
 import android.content.Intent
@@ -38,26 +38,31 @@ class SetupActivity : AppCompatActivity() {
         val sectionCategory = findViewById<View>(R.id.sectionCategorySettings)
         val btnStartNew = findViewById<Button>(R.id.btnStartNew)
         val btnTakeover = findViewById<Button>(R.id.btnTakeover)
+        val btnDirectForcePush = findViewById<Button>(R.id.btnDirectForcePush)
         val setupContent = findViewById<View>(R.id.setupContent)
         val txtTakeoverHint = findViewById<View>(R.id.txtTakeoverHint)
+        val txtForcePushHint = findViewById<View>(R.id.txtForcePushHint)
 
-        var setupMode = "" // "NEW" or "TAKEOVER"
+        var setupMode = "" // "NEW", "TAKEOVER", or "FORCE_PUSH"
 
         btnStartNew.setOnClickListener {
             setupMode = "NEW"
             setupContent.visibility = View.VISIBLE
             txtTakeoverHint.visibility = View.GONE
+            txtForcePushHint.visibility = View.GONE
             txtSyncHint.visibility = View.VISIBLE
             sectionStorage.visibility = View.VISIBLE
             sectionCategory.visibility = View.VISIBLE
             btnStartNew.setBackgroundColor(android.graphics.Color.parseColor("#BBDEFB"))
             btnTakeover.setBackgroundColor(android.graphics.Color.parseColor("#FFF3E0"))
+            btnDirectForcePush.setBackgroundColor(android.graphics.Color.parseColor("#FFEBEE"))
         }
 
         btnTakeover.setOnClickListener {
             setupMode = "TAKEOVER"
             setupContent.visibility = View.VISIBLE
             txtTakeoverHint.visibility = View.VISIBLE
+            txtForcePushHint.visibility = View.GONE
             txtSyncHint.visibility = View.GONE
             syncEnabledSwitch.isChecked = true
             // Hide local setup for takeover to focus on NAS
@@ -65,6 +70,22 @@ class SetupActivity : AppCompatActivity() {
             sectionCategory.visibility = View.GONE
             btnTakeover.setBackgroundColor(android.graphics.Color.parseColor("#FFE0B2"))
             btnStartNew.setBackgroundColor(android.graphics.Color.parseColor("#E3F2FD"))
+            btnDirectForcePush.setBackgroundColor(android.graphics.Color.parseColor("#FFEBEE"))
+        }
+
+        btnDirectForcePush.setOnClickListener {
+            setupMode = "FORCE_PUSH"
+            setupContent.visibility = View.VISIBLE
+            txtForcePushHint.visibility = View.VISIBLE
+            txtTakeoverHint.visibility = View.GONE
+            txtSyncHint.visibility = View.GONE
+            syncEnabledSwitch.isChecked = true
+            // Hide local setup
+            sectionStorage.visibility = View.GONE
+            sectionCategory.visibility = View.GONE
+            btnDirectForcePush.setBackgroundColor(android.graphics.Color.parseColor("#FFCDD2"))
+            btnStartNew.setBackgroundColor(android.graphics.Color.parseColor("#E3F2FD"))
+            btnTakeover.setBackgroundColor(android.graphics.Color.parseColor("#FFF3E0"))
         }
 
         // Initialize category input with current categories from ViewModel
@@ -106,6 +127,15 @@ class SetupActivity : AppCompatActivity() {
                     .show()
             } else if (setupMode == "TAKEOVER") {
                 performFinalSetup(viewModel, fridgesContainer, categoryInput, syncUrlInput, setupMode)
+            } else if (setupMode == "FORCE_PUSH") {
+                AlertDialog.Builder(this)
+                    .setTitle("🔥 危险操作确认")
+                    .setMessage("即将执行【强制推库】：\n\n1. 将清空服务器上的所有已有数据\n2. 将本地数据库完整覆盖云端文件\n3. 不做差异对比，不合并，仅替换\n\n确定要用当前本地数据覆盖全网云端吗？")
+                    .setPositiveButton("我不怕，冲！") { _, _ ->
+                        performFinalSetup(viewModel, fridgesContainer, categoryInput, syncUrlInput, setupMode)
+                    }
+                    .setNegativeButton("点错了，撤退", null)
+                    .show()
             } else {
                 Toast.makeText(this, "请先选择入驻方式", Toast.LENGTH_SHORT).show()
             }
@@ -138,7 +168,7 @@ class SetupActivity : AppCompatActivity() {
                     return@downloadConfig
                 }
                 
-                com.example.coolbox.util.CloudSyncManager.downloadDatabase(this, syncUrl) { success ->
+                com.example.coolbox.util.CloudSyncManager.downloadDatabase(this, syncUrl) { success, _ ->
                     runOnUiThread {
                         progress.dismiss()
                         if (success) {
@@ -157,6 +187,29 @@ class SetupActivity : AppCompatActivity() {
                                 .setPositiveButton("重试", null)
                                 .show()
                         }
+                    }
+                }
+            }
+            return
+        }
+
+        if (setupMode == "FORCE_PUSH") {
+            if (syncUrl.isBlank()) {
+                Toast.makeText(this, "强制推库模式必须输入服务器地址", Toast.LENGTH_SHORT).show()
+                return
+            }
+            val progress = android.app.ProgressDialog(this).apply {
+                setMessage("正在提取数据并强力冲刷服务器...")
+                setCancelable(false)
+                show()
+            }
+            viewModel.forceSyncAndHealDatabase { success, msg ->
+                runOnUiThread {
+                    progress.dismiss()
+                    Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+                    if (success) {
+                        startActivity(Intent(this, MainActivity::class.java))
+                        finish()
                     }
                 }
             }
@@ -383,19 +436,13 @@ class SetupActivity : AppCompatActivity() {
                         text = "删除"
                         setOnClickListener {
                             currentCategories.remove(cat)
-                            // Note: refreshList() will be called indirectly by the outer logic if needed, 
-                            // but for simplicity we re-invoke current logic or dialog.
-                            // In a real app we'd use a RecyclerView, but for this guided setup, a re-render works.
                         }
                     }
                     row.addView(tv)
-                    // row.addView(btnDel) // Removing categories might be dangerous for data loss, user asked for migration
-                    // Let's stick to the user's flow: they want to be able to change/set categories.
                     listLayout.addView(row)
                 }
             }
 
-            // Simplified approach: use a multi-select or a simple list with "Add"
             AlertDialog.Builder(this)
                 .setTitle("设置食品分类")
                 .setMessage("根据您的习惯调整分类名称（长按项可删除/修改）")
@@ -409,7 +456,7 @@ class SetupActivity : AppCompatActivity() {
                             val newName = input.text.toString()
                             if (newName.isNotBlank() && newName != cat) {
                                 currentCategories[idx] = newName
-                                requestCategorySetup(allFinalLocations, fridgeBaseNames, allCapabilities, viewModel, syncEnabled, syncUrl, currentCategories) // Recursively refresh
+                                requestCategorySetup(allFinalLocations, fridgeBaseNames, allCapabilities, viewModel, syncEnabled, syncUrl, currentCategories) 
                             }
                         }
                         .setNegativeButton("删除") { _, _ ->
@@ -471,7 +518,7 @@ class SetupActivity : AppCompatActivity() {
 
             val oldCat = removedCategories[index]
             val dialog = AlertDialog.Builder(this)
-            dialog.setTitle("[$oldCat] \u5df2\u5220\u9664\uff0c\u8bf7\u9009\u62e9\u63a5\u7ba1\u5206\u7c7b")
+            dialog.setTitle("[$oldCat] 已删除，请选择接管分类")
             dialog.setItems(newCategories.toTypedArray()) { _: DialogInterface, targetIdx: Int ->
                 val targetCat = newCategories[targetIdx]
                 viewModel.migrateCategory(oldCat, targetCat)
@@ -503,7 +550,6 @@ class SetupActivity : AppCompatActivity() {
                     return@runOnUiThread
                 }
 
-                // Use the backend-provided formatted time
                 val displayList = list.map { it.time }.toTypedArray()
 
                 AlertDialog.Builder(this)
@@ -537,9 +583,7 @@ class SetupActivity : AppCompatActivity() {
                 progress.dismiss()
                 if (success) {
                     Toast.makeText(this, "回滚成功！正在同步最新快照...", Toast.LENGTH_LONG).show()
-                    // Force a full download/sync to refresh local DB
-                    com.example.coolbox.util.CloudSyncManager.downloadDatabase(this, serverUrl) { _ ->
-                        // No extra action needed, Toast handles feedback
+                    com.example.coolbox.util.CloudSyncManager.downloadDatabase(this, serverUrl) { _, _ ->
                     }
                 } else {
                     Toast.makeText(this, "回滚失败: $error", Toast.LENGTH_LONG).show()
@@ -548,4 +592,4 @@ class SetupActivity : AppCompatActivity() {
         }
     }
 }
-// Version: V3.0.0-Pre21
+// Version: V3.0.0-Pre22

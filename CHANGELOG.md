@@ -1,6 +1,29 @@
-# Changelog
+# [V3.0.0-Pre27] - 2026-03-20
+### Added
+- **新增图标**: 集成 `ic_food_lamb` (羊肉) 图标，补齐肉类图库。
+- **自动匹配增强**: 完善了“羊肉”、“腊肠”、“腊肉”、“冰淇凌”的图标自动匹配逻辑。
 
-All notable changes to the CoolBox project will be documented in this file.
+### Fixed
+- **图标刷新机制**: 优化了 `FoodEditHelper` 的保存逻辑。现在即便不修改食物名称，直接点击保存也会触发图标重匹配，解决了旧数据缺少图标的问题。
+
+# [V3.0.0-Pre26] - 2026-03-19
+### Fixed
+- **同步连通性**: 修复了由于 Android HTTP 限制导致的同步失败（启用 `usesCleartextTraffic`）。
+- **同步架构升级**: 从传统的 JSON 颗粒同步升级为更稳定的“物理文件覆盖”同步。
+- **服务端匹配**: 更新了 `server.py` 以支持物理同步路径。
+
+## [V3.0.0-Pre25] - 2026-03-19
+### Added
+- **图标选择**: 在图标选择对话框中补全了 `ic_food_jam` (果酱) 和 `ic_food_cooked` (剩菜)。
+
+## [V3.0.0-Pre24] - 2026-03-19
+### Added
+- **新图标自动匹配**: 增加了“果酱”、“酱料”、“调味品”的自动匹配 `ic_food_jam` 逻辑。
+- **代码重构**: 修复了由于 `CloudSyncManager` 签名变更导致的编译错误。
+
+### Changed
+- **编译发布**: 更新版本号并编译 APK。
+- **文件命名**: 确保安装包文件名包含版本号。
 
 ## [V2.9.0-RC3] - 2026-03-12
 ### 架构重构 (Architecture Refactoring)

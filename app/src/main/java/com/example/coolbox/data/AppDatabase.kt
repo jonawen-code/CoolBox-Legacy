@@ -1,4 +1,4 @@
-// Version: V3.0.0-Pre21
+// Version: V3.0.0-Pre22
 package com.example.coolbox.data
 
 import android.content.Context
@@ -53,6 +53,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "coolbox_database"
                 )
+                .setJournalMode(RoomDatabase.JournalMode.TRUNCATE) // ⚠️ 修改 1：从底层直接废掉 WAL，强制单文件实时写入
                 .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                 .fallbackToDestructiveMigration()
                 .build()
@@ -63,10 +64,11 @@ abstract class AppDatabase : RoomDatabase() {
         }
         fun exportDatabase(context: Context) {
             try {
-                // Flush WAL to main database file
-                val db = getDatabase(context)
-                db.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)", null).close()
-
+// Flush WAL to main database file
+val db = getDatabase(context)
+db.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)", null).use { cursor ->
+    cursor.moveToFirst() 
+}
                 val dbFile = context.getDatabasePath("coolbox_database")
                 if (!dbFile.exists()) return
 

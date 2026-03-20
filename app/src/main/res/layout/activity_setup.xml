@@ -39,27 +39,40 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_marginTop="16dp"
-            android:weightSum="2">
+            android:weightSum="3">
 
             <Button
                 android:id="@+id/btnStartNew"
                 android:layout_width="0dp"
                 android:layout_height="64dp"
                 android:layout_weight="1"
-                android:layout_marginEnd="8dp"
-                android:text="开启全新体验"
-                android:background="#E3F2FD"
-                android:textColor="#2196F3" />
+                android:layout_marginEnd="4dp"
+                android:text="开启全新"
+                android:textSize="12sp"
+                android:background="#E1F5FE"
+                android:textColor="#0288D1" />
 
             <Button
                 android:id="@+id/btnTakeover"
                 android:layout_width="0dp"
                 android:layout_height="64dp"
                 android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:text="接管已有仓库"
+                android:layout_marginHorizontal="4dp"
+                android:text="接管仓库"
+                android:textSize="12sp"
                 android:background="#FFF3E0"
-                android:textColor="#FF9800" />
+                android:textColor="#F57C00" />
+
+            <Button
+                android:id="@+id/btnDirectForcePush"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="强力冲刷"
+                android:textSize="12sp"
+                android:background="#FFEBEE"
+                android:textColor="#D32F2F" />
         </LinearLayout>
 
         <LinearLayout
@@ -156,6 +169,17 @@
                 android:textSize="14sp"
                 android:visibility="gone"
                 android:text="http://192.168.31.94:3001/coolbox" />
+
+            <TextView
+                android:id="@+id/txtForcePushHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="⚠ 警告：此模式将用本地数据【强力冲刷】并覆盖云端原有文件！"
+                android:textSize="12sp"
+                android:textColor="#D32F2F"
+                android:textStyle="bold"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/txtTakeoverHint"
