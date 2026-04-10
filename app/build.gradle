@@ -10,8 +10,8 @@ android {
         applicationId "com.example.coolbox.legacy"
         minSdk 14
         targetSdk 33
-        versionCode 71
-        versionName "V3.0.0-Pre27"
+        versionCode 88
+        versionName "4.0.8"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         
@@ -49,6 +49,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.5.1'
     implementation 'com.google.android.material:material:1.7.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.slidingpanelayout:slidingpanelayout:1.2.0'
     
     // Networking & Serialization
     implementation 'com.squareup.okhttp3:okhttp:3.12.13'

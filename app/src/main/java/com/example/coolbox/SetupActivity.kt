@@ -1,595 +1,406 @@
-// Version: V3.0.0-Pre22
 package com.example.coolbox
 
+import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
-import com.example.coolbox.legacy.R
+import android.net.Uri
 import android.os.Bundle
-import android.view.View
-import android.widget.Button
-import android.widget.EditText
-import android.widget.Toast
-import androidx.appcompat.widget.SwitchCompat
+import android.view.ViewGroup
+import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.example.coolbox.ui.MainViewModel
-import androidx.appcompat.app.AlertDialog
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.view.ViewGroup
-import android.content.DialogInterface
-import android.view.Gravity
+import com.example.coolbox.util.BackupManager
+import com.example.coolbox.util.CloudSyncManager
+import com.example.coolbox.data.AppDatabase
+import com.example.coolbox.legacy.BuildConfig
+import com.example.coolbox.legacy.R
 
 class SetupActivity : AppCompatActivity() {
+
+    private lateinit var viewModel: MainViewModel
+    private val PICK_CBK_RESTORE = 1001
+    private val PICK_CBK_EXPORT = 1002
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_setup)
 
-        val viewModel = ViewModelProvider(this)[MainViewModel::class.java]
+        viewModel = ViewModelProvider(this).get(MainViewModel::class.java)
 
-        val fridgesContainer = findViewById<android.widget.LinearLayout>(R.id.fridgeListContainer)
-        val btnAddFridge = findViewById<Button>(R.id.btnAddFridge)
-        val categoryInput = findViewById<EditText>(R.id.categoryInput)
-        val completeBtn = findViewById<Button>(R.id.completeBtn)
-        val syncEnabledSwitch = findViewById<SwitchCompat>(R.id.syncEnabledSwitch)
+        val syncSwitch = findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.syncEnabledSwitch)
         val syncUrlInput = findViewById<EditText>(R.id.syncUrlInput)
-        val txtSyncHint = findViewById<View>(R.id.txtSyncHint)
-        val sectionStorage = findViewById<View>(R.id.sectionStorageSettings)
-        val sectionCategory = findViewById<View>(R.id.sectionCategorySettings)
-        val btnStartNew = findViewById<Button>(R.id.btnStartNew)
-        val btnTakeover = findViewById<Button>(R.id.btnTakeover)
-        val btnDirectForcePush = findViewById<Button>(R.id.btnDirectForcePush)
-        val setupContent = findViewById<View>(R.id.setupContent)
-        val txtTakeoverHint = findViewById<View>(R.id.txtTakeoverHint)
-        val txtForcePushHint = findViewById<View>(R.id.txtForcePushHint)
+        val btnTest = findViewById<Button>(R.id.btnTestConnection)
+        val btnComplete = findViewById<Button>(R.id.completeBtn)
+        val txtVersion = findViewById<TextView>(R.id.txtAppVersion)
 
-        var setupMode = "" // "NEW", "TAKEOVER", or "FORCE_PUSH"
+        // Load current settings
+        syncSwitch.isChecked = viewModel.syncEnabled.value ?: false
+        syncUrlInput.setText(viewModel.syncUrl.value ?: "")
+        txtVersion.text = "V${BuildConfig.VERSION_NAME}\n4.0 全能物资空间版"
 
-        btnStartNew.setOnClickListener {
-            setupMode = "NEW"
-            setupContent.visibility = View.VISIBLE
-            txtTakeoverHint.visibility = View.GONE
-            txtForcePushHint.visibility = View.GONE
-            txtSyncHint.visibility = View.VISIBLE
-            sectionStorage.visibility = View.VISIBLE
-            sectionCategory.visibility = View.VISIBLE
-            btnStartNew.setBackgroundColor(android.graphics.Color.parseColor("#BBDEFB"))
-            btnTakeover.setBackgroundColor(android.graphics.Color.parseColor("#FFF3E0"))
-            btnDirectForcePush.setBackgroundColor(android.graphics.Color.parseColor("#FFEBEE"))
+        // 1. Factory Reset
+        findViewById<Button>(R.id.btnFactoryReset).setOnClickListener {
+            showFactoryResetDialog()
         }
 
-        btnTakeover.setOnClickListener {
-            setupMode = "TAKEOVER"
-            setupContent.visibility = View.VISIBLE
-            txtTakeoverHint.visibility = View.VISIBLE
-            txtForcePushHint.visibility = View.GONE
-            txtSyncHint.visibility = View.GONE
-            syncEnabledSwitch.isChecked = true
-            // Hide local setup for takeover to focus on NAS
-            sectionStorage.visibility = View.GONE
-            sectionCategory.visibility = View.GONE
-            btnTakeover.setBackgroundColor(android.graphics.Color.parseColor("#FFE0B2"))
-            btnStartNew.setBackgroundColor(android.graphics.Color.parseColor("#E3F2FD"))
-            btnDirectForcePush.setBackgroundColor(android.graphics.Color.parseColor("#FFEBEE"))
+        // 2. Backup & Restore
+        findViewById<Button>(R.id.btnBackup).setOnClickListener {
+            showBackupBranchDialog()
         }
 
-        btnDirectForcePush.setOnClickListener {
-            setupMode = "FORCE_PUSH"
-            setupContent.visibility = View.VISIBLE
-            txtForcePushHint.visibility = View.VISIBLE
-            txtTakeoverHint.visibility = View.GONE
-            txtSyncHint.visibility = View.GONE
-            syncEnabledSwitch.isChecked = true
-            // Hide local setup
-            sectionStorage.visibility = View.GONE
-            sectionCategory.visibility = View.GONE
-            btnDirectForcePush.setBackgroundColor(android.graphics.Color.parseColor("#FFCDD2"))
-            btnStartNew.setBackgroundColor(android.graphics.Color.parseColor("#E3F2FD"))
-            btnTakeover.setBackgroundColor(android.graphics.Color.parseColor("#FFF3E0"))
+        findViewById<Button>(R.id.btnRestore).setOnClickListener {
+            showRestoreBranchDialog()
         }
 
-        // Initialize category input with current categories from ViewModel
-        val currentCats = viewModel.categories.value
-        if (currentCats != null && currentCats.isNotEmpty()) {
-            categoryInput.setText(currentCats.joinToString(", "))
-        }
-
-        syncEnabledSwitch.setOnCheckedChangeListener { _, isChecked ->
-            syncUrlInput.visibility = if (isChecked) View.VISIBLE else View.GONE
-        }
-
-        // Initialize sync settings from ViewModel
-        syncEnabledSwitch.isChecked = viewModel.syncEnabled.value ?: false
-        syncUrlInput.setText(viewModel.syncServerUrl)
-        syncUrlInput.visibility = if (syncEnabledSwitch.isChecked) View.VISIBLE else View.GONE
-
-        // Time Machine Restore removed in Pre15 UI Purification
-
-        val fridgeNames = mutableListOf<String>()
-        
-        // Initialize with default or existing fridges (bases)
-        val existingBases = viewModel.fridgeBases.value ?: listOf("我的冰箱", "小冰柜")
-        existingBases.forEach { addFridgeRow(it, fridgesContainer, fridgeNames) }
-
-        btnAddFridge.setOnClickListener {
-            addFridgeRow("", fridgesContainer, fridgeNames)
-        }
-
-        completeBtn.setOnClickListener {
-            if (setupMode == "NEW") {
-                AlertDialog.Builder(this)
-                    .setTitle("⚠️ 安全提示")
-                    .setMessage("注意：此操作将创建全新的本地数据。如果后续连接服务器，可能会覆盖掉云端的旧数据，请确认是否继续？")
-                    .setPositiveButton("确认继续") { _, _ ->
-                        performFinalSetup(viewModel, fridgesContainer, categoryInput, syncUrlInput, setupMode)
-                    }
-                    .setNegativeButton("取消", null)
-                    .show()
-            } else if (setupMode == "TAKEOVER") {
-                performFinalSetup(viewModel, fridgesContainer, categoryInput, syncUrlInput, setupMode)
-            } else if (setupMode == "FORCE_PUSH") {
-                AlertDialog.Builder(this)
-                    .setTitle("🔥 危险操作确认")
-                    .setMessage("即将执行【强制推库】：\n\n1. 将清空服务器上的所有已有数据\n2. 将本地数据库完整覆盖云端文件\n3. 不做差异对比，不合并，仅替换\n\n确定要用当前本地数据覆盖全网云端吗？")
-                    .setPositiveButton("我不怕，冲！") { _, _ ->
-                        performFinalSetup(viewModel, fridgesContainer, categoryInput, syncUrlInput, setupMode)
-                    }
-                    .setNegativeButton("点错了，撤退", null)
-                    .show()
-            } else {
-                Toast.makeText(this, "请先选择入驻方式", Toast.LENGTH_SHORT).show()
+        // 3. Sync Settings
+        btnTest.setOnClickListener {
+            val url = syncUrlInput.text.toString().trim()
+            if (url.isEmpty()) {
+                Toast.makeText(this, "请输入服务器地址", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
             }
+            CloudSyncManager.testConnection(url) { success, error ->
+                runOnUiThread {
+                    if (success) {
+                        Toast.makeText(this, "✅ 连接成功！", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this, "❌ 连接失败: $error", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+
+        btnComplete.setOnClickListener {
+            val enabled = syncSwitch.isChecked
+            val url = syncUrlInput.text.toString().trim()
+            
+            // Save settings and mark as complete
+            getSharedPreferences("coolbox_prefs", MODE_PRIVATE).edit()
+                .putBoolean("setup_complete", true)
+                .apply()
+
+            viewModel.updateSyncSettings(enabled, url)
+            Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show()
+            
+            // Restart MainActivity since it might have been finished
+            val intent = Intent(this, MainActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            startActivity(intent)
+            finish()
         }
     }
 
-    private fun performFinalSetup(viewModel: MainViewModel, fridgesContainer: LinearLayout, categoryInput: EditText, syncUrlInput: EditText, setupMode: String) {
-        val categoriesFromInput = categoryInput.text.toString().split(",").map { it.trim() }.filter { it.isNotEmpty() }
-        val finalFridges = mutableListOf<String>()
-        val syncUrl = syncUrlInput.text.toString()
-        val syncEnabled = findViewById<SwitchCompat>(R.id.syncEnabledSwitch).isChecked
-
-        if (setupMode == "TAKEOVER") {
-            if (syncUrl.isBlank()) {
-                Toast.makeText(this, "接管模式必须输入服务器地址", Toast.LENGTH_SHORT).show()
-                return
-            }
-            // 模式二：接管已有仓库
-            val progress = android.app.ProgressDialog(this).apply {
-                setMessage("正在连接服务器并接管仓库...")
-                setCancelable(false)
-                show()
-            }
-            com.example.coolbox.util.CloudSyncManager.downloadConfig(this, syncUrl) { configSuccess ->
-                if (!configSuccess) {
-                    runOnUiThread {
-                        progress.dismiss()
-                        Toast.makeText(this, "获取云端配置失败", Toast.LENGTH_SHORT).show()
-                    }
-                    return@downloadConfig
-                }
-                
-                com.example.coolbox.util.CloudSyncManager.downloadDatabase(this, syncUrl) { success, _ ->
-                    runOnUiThread {
-                        progress.dismiss()
-                        if (success) {
-                            // Mark pull as done to enable future pushes
-                            getSharedPreferences("coolbox_prefs", MODE_PRIVATE).edit().putBoolean("is_pull_first_done", true).apply()
-                            // Reload VM state from SharedPreferences (which were updated by downloadConfig)
-                            viewModel.refreshSettings() 
-                            viewModel.completeSetup(emptyList(), emptyList(), emptyMap(), emptyList(), true, syncUrl)
-                            Toast.makeText(this, "接管成功！您的设备与配置已就绪。", Toast.LENGTH_LONG).show()
-                            startActivity(Intent(this, MainActivity::class.java))
-                            finish()
-                        } else {
-                            AlertDialog.Builder(this)
-                                .setTitle("接管失败")
-                                .setMessage("无法从云端下载食品数据。")
-                                .setPositiveButton("重试", null)
-                                .show()
-                        }
-                    }
-                }
-            }
-            return
+    private fun showFactoryResetDialog() {
+        val input = EditText(this).apply {
+            hint = "我确认需要重制"
         }
+        AlertDialog.Builder(this)
+            .setTitle("⚠️ 危险操作：恢复出厂设置")
+            .setMessage("此操作将抹除所有本地食品数据、存储设备设置及分类配置。此操作无法撤销！\n\n请输入“我确认需要重制”以继续：")
+            .setView(input)
+            .setPositiveButton("立即重制") { _, _ ->
+                if (input.text.toString() == "我确认需要重制") {
+                    executeFactoryReset()
+                } else {
+                    Toast.makeText(this, "输入错误，取消重制", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
 
-        if (setupMode == "FORCE_PUSH") {
-            if (syncUrl.isBlank()) {
-                Toast.makeText(this, "强制推库模式必须输入服务器地址", Toast.LENGTH_SHORT).show()
-                return
-            }
-            val progress = android.app.ProgressDialog(this).apply {
-                setMessage("正在提取数据并强力冲刷服务器...")
-                setCancelable(false)
-                show()
-            }
-            viewModel.forceSyncAndHealDatabase { success, msg ->
+    private fun executeFactoryReset() {
+        val progress = android.app.ProgressDialog(this).apply {
+            setMessage("正在重制系统...")
+            show()
+        }
+        
+        Thread {
+            try {
+                // 1. Clear SharedPreferences
+                getSharedPreferences("coolbox_prefs", MODE_PRIVATE).edit().clear().commit()
+                
+                // 2. Delete Database
+                AppDatabase.closeDatabase()
+                deleteDatabase("coolbox_database")
+                
                 runOnUiThread {
                     progress.dismiss()
-                    Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
-                    if (success) {
-                        startActivity(Intent(this, MainActivity::class.java))
-                        finish()
-                    }
+                    Toast.makeText(this, "系统已重制，正在退出...", Toast.LENGTH_LONG).show()
+                    val intent = Intent(this, MainActivity::class.java)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    startActivity(intent)
+                    finish()
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    progress.dismiss()
+                    Toast.makeText(this, "重制失败: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
-            return
-        }
-
-        // 默认模式 / NEW 模式逻辑
-        for (i in 0 until fridgesContainer.childCount) {
-            val row = fridgesContainer.getChildAt(i)
-            val input = row.findViewById<EditText>(android.R.id.text1)
-            val name = input.text.toString().trim()
-            if (name.isNotEmpty()) finalFridges.add(name)
-        }
-
-        if (finalFridges.isEmpty() || categoriesFromInput.isEmpty()) {
-            Toast.makeText(this, "请输入至少一个设备和一个分类", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        // NEW 模式默认 Pull 完毕（因为它是新起点）
-        getSharedPreferences("coolbox_prefs", MODE_PRIVATE).edit().putBoolean("is_pull_first_done", true).apply()
-
-        val existingBases = viewModel.fridgeBases.value ?: emptyList()
-        if (finalFridges.sorted() == existingBases.sorted()) {
-            AlertDialog.Builder(this)
-                .setTitle("设备未变更")
-                .setMessage("检测到储存设备名称未变动，是否跳过层级/容量设置，直接管理食品分类？")
-                .setPositiveButton("跳过") { _, _ ->
-                    val currentFridges = viewModel.fridges.value ?: emptyList()
-                    val currentCaps = viewModel.fridgeCapabilities.value ?: emptyMap()
-                    requestCategorySetup(currentFridges, finalFridges, currentCaps, viewModel, syncEnabled, syncUrl, categoriesFromInput)
-                }
-                .setNegativeButton("重新设置") { _, _ ->
-                    requestCapabilities(finalFridges, 0, mutableListOf(), mutableMapOf(), categoriesFromInput, viewModel, syncEnabled, syncUrl)
-                }
-                .show()
-        } else {
-            requestCapabilities(finalFridges, 0, mutableListOf(), mutableMapOf(), categoriesFromInput, viewModel, syncEnabled, syncUrl)
-        }
+        }.start()
     }
 
-    private fun addFridgeRow(name: String, container: android.widget.LinearLayout, names: MutableList<String>) {
-        val row = android.widget.LinearLayout(this).apply {
-            orientation = android.widget.LinearLayout.HORIZONTAL
-            layoutParams = android.widget.LinearLayout.LayoutParams(
-                android.widget.LinearLayout.LayoutParams.MATCH_PARENT, 
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            setPadding(0, 8, 0, 8)
-        }
-
-        val editText = EditText(this).apply {
-            id = android.R.id.text1
-            layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            hint = "设备名称 (如: 侧边小柜)"
-            setText(name)
-        }
-
-        val btnDelete = Button(this).apply {
-            text = "删除"
-            setTextColor(android.graphics.Color.RED)
-            background = null
-            setOnClickListener {
-                container.removeView(row)
-            }
-        }
-
-        row.addView(editText)
-        row.addView(btnDelete)
-        container.addView(row)
-    }
-
-    private fun getChineseOrdinal(i: Int): String {
-        return when (i) {
-            1 -> "第一"
-            2 -> "第二"
-            3 -> "第三"
-            4 -> "第四"
-            5 -> "第五"
-            6 -> "第六"
-            7 -> "第七"
-            8 -> "第八"
-            9 -> "第九"
-            else -> i.toString()
-        }
-    }
-
-    private fun requestCapabilities(
-        fridgeBaseNames: List<String>,
-        index: Int,
-        allFinalLocations: MutableList<String>,
-        allCapabilities: MutableMap<String, String>,
-        categories: List<String>,
-        viewModel: MainViewModel,
-        syncEnabled: Boolean,
-        syncUrl: String
-    ) {
-        if (index >= fridgeBaseNames.size) {
-            requestCategorySetup(
-                allFinalLocations,
-                fridgeBaseNames,
-                allCapabilities,
-                viewModel,
-                syncEnabled,
-                syncUrl
-            )
-            return
-        }
-
-        val baseName = fridgeBaseNames[index]
-        val typeOptions = arrayOf(
-            "冰箱：仅冷藏室",
-            "冰柜：仅冷冻仓 (支持多仓/分层)",
-            "常规冰箱：冷藏 + 冷冻 (两门/对开门)",
-            "三门冰箱：冷藏 + 微冻 + 冷冻"
-        )
-
-        android.app.AlertDialog.Builder(this)
-            .setTitle("配置设备：$baseName")
-            .setItems(typeOptions) { _, which ->
+    private fun showBackupBranchDialog() {
+        val options = arrayOf("本地导出 (CBK 压缩包)", "本地导出 (CSV 列表)", "云端备份到 NAS")
+        AlertDialog.Builder(this)
+            .setTitle("选择备份方式")
+            .setItems(options) { _, which ->
                 when (which) {
-                    0 -> { // Only Refrig
-                        val locName = "$baseName 冷藏室"
-                        allFinalLocations.add(locName)
-                        allCapabilities[locName] = "冷藏"
-                        requestCapabilities(fridgeBaseNames, index + 1, allFinalLocations, allCapabilities, categories, viewModel, syncEnabled, syncUrl)
-                    }
-                    1 -> { // Deep Freezer
-                        promptForFreezerLayers(baseName, "", true) { layers ->
-                            layers.forEach { l ->
-                                allFinalLocations.add(l)
-                                allCapabilities[l] = "冷冻"
-                            }
-                            requestCapabilities(fridgeBaseNames, index + 1, allFinalLocations, allCapabilities, categories, viewModel, syncEnabled, syncUrl)
-                        }
-                    }
-                    2 -> { // Refrig + Freezer
-                        val refrigLoc = "$baseName 冷藏室"
-                        allFinalLocations.add(refrigLoc)
-                        allCapabilities[refrigLoc] = "冷藏"
-                        promptForFreezerLayers(baseName, "冷冻室", false) { layers ->
-                            layers.forEach { l ->
-                                allFinalLocations.add(l)
-                                allCapabilities[l] = "冷冻"
-                            }
-                            requestCapabilities(fridgeBaseNames, index + 1, allFinalLocations, allCapabilities, categories, viewModel, syncEnabled, syncUrl)
-                        }
-                    }
-                    3 -> { // Refrig + Micro + Freezer
-                        val refrigLoc = "$baseName 冷藏室"
-                        allFinalLocations.add(refrigLoc)
-                        allCapabilities[refrigLoc] = "冷藏"
-                        
-                        val microLoc = "$baseName 微冻室"
-                        allFinalLocations.add(microLoc)
-                        allCapabilities[microLoc] = "冷冻" // Treat micro-freeze as freezer for logic
-                        
-                        promptForFreezerLayers(baseName, "冷冻室", false) { layers ->
-                            layers.forEach { l ->
-                                allFinalLocations.add(l)
-                                allCapabilities[l] = "冷冻"
-                            }
-                            requestCapabilities(fridgeBaseNames, index + 1, allFinalLocations, allCapabilities, categories, viewModel, syncEnabled, syncUrl)
-                        }
-                    }
+                    0 -> startCbkExport()
+                    1 -> startCsvExport()
+                    2 -> chooseBackupFormatForNas()
                 }
             }
-            .setCancelable(false)
             .show()
     }
 
-    private fun promptForFreezerLayers(baseName: String, compartmentName: String, isDeepFreezer: Boolean, onComplete: (List<String>) -> Unit) {
-        val layerOptions = (1..9).map { "${it}层" }.toTypedArray()
-        val title = if (isDeepFreezer) "$baseName 有几个仓位/层？" else "$baseName 的 $compartmentName 有几层？"
+    private fun startCbkExport() {
+        try {
+            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "application/zip"
+                putExtra(android.content.Intent.EXTRA_TITLE, BackupManager.generateBackupFileName("CoolBox_Backup", ".cbk"))
+            }
+            startActivityForResult(intent, PICK_CBK_EXPORT)
+        } catch (e: Exception) {
+            executeLocalFallbackBackup(".cbk")
+        }
+    }
+
+    private fun startCsvExport() {
+        try {
+            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "text/csv"
+                putExtra(android.content.Intent.EXTRA_TITLE, BackupManager.generateBackupFileName("CoolBox_Data", ".csv"))
+            }
+            startActivityForResult(intent, PICK_CBK_EXPORT) // Reuse code, distinguish by Uri later
+        } catch (e: Exception) {
+            executeLocalFallbackBackup(".csv")
+        }
+    }
+
+    private fun executeLocalFallbackBackup(extension: String) {
+        val dir = android.os.Environment.getExternalStoragePublicDirectory("CoolBox")
+        if (!dir.exists()) dir.mkdirs()
+        val fileName = BackupManager.generateBackupFileName("CoolBox_Export", extension)
+        val file = java.io.File(dir, fileName)
+        val uri = Uri.fromFile(file)
         
-        android.app.AlertDialog.Builder(this)
-            .setTitle(title)
-            .setItems(layerOptions) { _, which ->
-                val count = which + 1
-                val layers = if (count == 1) {
-                    if (isDeepFreezer) listOf(baseName) else listOf("$baseName $compartmentName")
+        Thread {
+            val success = if (extension == ".csv") BackupManager.exportToCsv(this, uri) else BackupManager.exportData(this, uri)
+            runOnUiThread {
+                if (success) Toast.makeText(this, "文件已保存至: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+                else Toast.makeText(this, "保存失败", Toast.LENGTH_SHORT).show()
+            }
+        }.start()
+    }
+
+    private fun chooseBackupFormatForNas() {
+        val formats = arrayOf("CBK 压缩包", "CSV 列表")
+        AlertDialog.Builder(this)
+            .setTitle("选择同步格式")
+            .setItems(formats) { _, which ->
+                executeNasBackup(if (which == 0) ".cbk" else ".csv")
+            }
+            .show()
+    }
+
+    private fun showRestoreBranchDialog() {
+        val options = arrayOf("本地还原 (选择文件)", "云端还原 (从 NAS 下载)")
+        AlertDialog.Builder(this)
+            .setTitle("选择还原来源")
+            .setItems(options) { _, which ->
+                if (which == 0) {
+                    try {
+                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "*/*"
+                        }
+                        startActivityForResult(intent, PICK_CBK_RESTORE)
+                    } catch (e: Exception) {
+                        executeLocalFallbackRestore()
+                    }
                 } else {
-                    (1..count).map { i -> 
-                        val ordinal = getChineseOrdinal(i)
-                        if (isDeepFreezer) "$baseName ${ordinal}层" else "$baseName $compartmentName ${ordinal}层"
-                    }
+                    showNasRestoreList()
                 }
-                onComplete(layers)
             }
-            .setCancelable(false)
             .show()
     }
 
-    private fun requestCategorySetup(
-        allFinalLocations: List<String>,
-        fridgeBaseNames: List<String>,
-        allCapabilities: Map<String, String>,
-        viewModel: MainViewModel,
-        syncEnabled: Boolean,
-        syncUrl: String,
-        categoriesToStartWith: List<String>? = null
-    ) {
-        val oldCategories = viewModel.categories.value ?: emptyList()
-        val currentCategories = (categoriesToStartWith ?: oldCategories).toMutableList()
-
-        val showEditDialog = {
-            val listLayout = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(32, 16, 32, 16)
-            }
-
-            val refreshList = {
-                listLayout.removeAllViews()
-                currentCategories.forEach { cat ->
-                    val row = LinearLayout(this).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = android.view.Gravity.CENTER_VERTICAL
-                    }
-                    val tv = TextView(this).apply {
-                        text = cat
-                        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                    }
-                    val btnDel = Button(this).apply {
-                        text = "删除"
-                        setOnClickListener {
-                            currentCategories.remove(cat)
-                        }
-                    }
-                    row.addView(tv)
-                    listLayout.addView(row)
-                }
-            }
-
-            AlertDialog.Builder(this)
-                .setTitle("设置食品分类")
-                .setMessage("根据您的习惯调整分类名称（长按项可删除/修改）")
-                .setItems(currentCategories.toTypedArray()) { _, idx ->
-                    val cat = currentCategories[idx]
-                    val input = EditText(this).apply { setText(cat) }
-                    AlertDialog.Builder(this)
-                        .setTitle("修改分类")
-                        .setView(input)
-                        .setPositiveButton("保存") { _, _ ->
-                            val newName = input.text.toString()
-                            if (newName.isNotBlank() && newName != cat) {
-                                currentCategories[idx] = newName
-                                requestCategorySetup(allFinalLocations, fridgeBaseNames, allCapabilities, viewModel, syncEnabled, syncUrl, currentCategories) 
-                            }
-                        }
-                        .setNegativeButton("删除") { _, _ ->
-                            currentCategories.removeAt(idx)
-                            requestCategorySetup(allFinalLocations, fridgeBaseNames, allCapabilities, viewModel, syncEnabled, syncUrl, currentCategories)
-                        }
-                        .show()
-                }
-                .setNeutralButton("新增分类") { _, _ ->
-                    val input = EditText(this).apply { hint = "例如：🍷 零度保鲜" }
-                    AlertDialog.Builder(this)
-                        .setTitle("新增分类")
-                        .setView(input)
-                        .setPositiveButton("添加") { _, _ ->
-                            val newName = input.text.toString()
-                            if (newName.isNotBlank()) {
-                                currentCategories.add(newName)
-                                requestCategorySetup(allFinalLocations, fridgeBaseNames, allCapabilities, viewModel, syncEnabled, syncUrl, currentCategories)
-                            }
-                        }
-                        .show()
-                }
-                .setPositiveButton("完成设置") { _, _ ->
-                    handleCategoryMigrationAndFinish(
-                        oldCategories,
-                        currentCategories,
-                        allFinalLocations,
-                        fridgeBaseNames,
-                        allCapabilities,
-                        viewModel,
-                        syncEnabled,
-                        syncUrl
-                    )
-                }
-                .show()
+    private fun executeLocalFallbackRestore() {
+        val dir = android.os.Environment.getExternalStoragePublicDirectory("CoolBox")
+        val files = dir.listFiles { _, name -> name.endsWith(".cbk") || name.endsWith(".csv") }?.map { it.name }
+        if (files.isNullOrEmpty()) {
+            Toast.makeText(this, "CoolBox 文件夹内未找到备份文件", Toast.LENGTH_SHORT).show()
+            return
         }
-        showEditDialog()
+        AlertDialog.Builder(this)
+            .setTitle("选择本地备份")
+            .setItems(files.toTypedArray()) { _, which ->
+                val file = java.io.File(dir, files[which])
+                handleRestoreFile(Uri.fromFile(file))
+            }
+            .show()
     }
 
-    private fun handleCategoryMigrationAndFinish(
-        oldCategories: List<String>,
-        newCategories: List<String>,
-        allFinalLocations: List<String>,
-        fridgeBaseNames: List<String>,
-        allCapabilities: Map<String, String>,
-        viewModel: MainViewModel,
-        syncEnabled: Boolean,
-        syncUrl: String
-    ) {
-        val removedCategories = oldCategories.filter { !newCategories.contains(it) }
+    private fun showRestoreModeDialog(uri: Uri) {
+        val options = arrayOf("完全覆盖 (删除当前数据)", "增量合并 (保留当前数据)")
+        AlertDialog.Builder(this)
+            .setTitle("选择还原模式")
+            .setItems(options) { _, which ->
+                if (which == 0) {
+                    if (BackupManager.importData(this, uri)) restartApp("数据已覆盖")
+                    else Toast.makeText(this, "还原失败", Toast.LENGTH_SHORT).show()
+                } else {
+                    if (BackupManager.importDataIncremental(this, uri)) Toast.makeText(this, "合并成功", Toast.LENGTH_SHORT).show()
+                    else Toast.makeText(this, "合并失败", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .show()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode != RESULT_OK || data == null) return
+        val uri = data.data ?: return
+        when (requestCode) {
+            PICK_CBK_EXPORT -> {
+                Thread {
+                    val isCsv = contentResolver.getType(uri)?.contains("csv") == true || uri.path?.endsWith(".csv") == true
+                    val success = if (isCsv) BackupManager.exportToCsv(this, uri) else BackupManager.exportData(this, uri)
+                    runOnUiThread { Toast.makeText(this, if (success) "导出成功" else "导出失败", Toast.LENGTH_SHORT).show() }
+                }.start()
+            }
+            PICK_CBK_RESTORE -> {
+                handleRestoreFile(uri)
+            }
+        }
+    }
+
+    private fun handleRestoreFile(uri: Uri) {
+        val type = contentResolver.getType(uri) ?: ""
+        val path = uri.path ?: ""
+        val isCsv = type.contains("csv") || path.endsWith(".csv")
         
-        fun processMigration(index: Int) {
-            if (index >= removedCategories.size) {
-                viewModel.completeSetup(allFinalLocations, fridgeBaseNames, allCapabilities, newCategories, syncEnabled, syncUrl)
-                startActivity(Intent(this, MainActivity::class.java))
-                finish()
-                return
+        if (isCsv) {
+            val progress = android.app.ProgressDialog(this).apply {
+                setMessage("正在导入 CSV 数据...")
+                show()
             }
-
-            val oldCat = removedCategories[index]
-            val dialog = AlertDialog.Builder(this)
-            dialog.setTitle("[$oldCat] 已删除，请选择接管分类")
-            dialog.setItems(newCategories.toTypedArray()) { _: DialogInterface, targetIdx: Int ->
-                val targetCat = newCategories[targetIdx]
-                viewModel.migrateCategory(oldCat, targetCat)
-                processMigration(index + 1)
-            }
-            dialog.setCancelable(true)
-            dialog.show()
+            Thread {
+                val success = BackupManager.importDataFromCsv(this, uri)
+                runOnUiThread {
+                    progress.dismiss()
+                    if (success) Toast.makeText(this, "CSV 导入成功（增量合并模式）", Toast.LENGTH_LONG).show()
+                    else Toast.makeText(this, "CSV 导入失败", Toast.LENGTH_SHORT).show()
+                }
+            }.start()
+        } else {
+            showRestoreModeDialog(uri)
         }
-
-        processMigration(0)
     }
 
-    private fun showRestoreDialog(serverUrl: String, viewModel: MainViewModel) {
+    private fun executeNasBackup(extension: String) {
+        val url = viewModel.syncUrl.value ?: ""
+        if (url.isEmpty()) {
+            Toast.makeText(this, "请先设置并测试同步地址", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        // 确保路径中包含 /backup，但不重复添加
+        var baseUrl = url.trim()
+        if (baseUrl.endsWith("/")) baseUrl = baseUrl.substring(0, baseUrl.length - 1)
+        val targetPath = if (baseUrl.endsWith("/backup")) baseUrl else "$baseUrl/backup"
+
+        AlertDialog.Builder(this)
+            .setTitle("确认备份至云端")
+            .setMessage("文件将上传至：\n$targetPath\n\n注意：App 将尝试使用与同步数据库相同的协议进行传输。")
+            .setPositiveButton("开始上传") { _, _ ->
+                val progress = android.app.ProgressDialog(this).apply {
+                    setMessage("正在打包并上传至 NAS...")
+                    show()
+                }
+                val fileName = BackupManager.generateBackupFileName("CoolBox_Backup", extension)
+                val tempFile = java.io.File(cacheDir, fileName)
+                val uri = Uri.fromFile(tempFile)
+                
+                Thread {
+                    val exportSuccess = if (extension == ".csv") BackupManager.exportToCsv(this, uri) else BackupManager.exportData(this, uri)
+                    if (exportSuccess) {
+                        CloudSyncManager.uploadBackupFile(this, url, tempFile) { success, msg ->
+                            runOnUiThread {
+                                progress.dismiss()
+                                if (success) Toast.makeText(this, "云端备份成功", Toast.LENGTH_SHORT).show()
+                                else Toast.makeText(this, "上传失败: $msg", Toast.LENGTH_LONG).show()
+                                tempFile.delete()
+                            }
+                        }
+                    } else {
+                        runOnUiThread { 
+                            progress.dismiss()
+                            Toast.makeText(this, "本地生成失败", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }.start()
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun showNasRestoreList() {
+        val url = viewModel.syncUrl.value ?: ""
+        if (url.isEmpty()) return
+        
         val progress = android.app.ProgressDialog(this).apply {
-            setMessage("正在从云端获取快照列表...")
-            setCancelable(false)
+            setMessage("正在获取云端列表...")
             show()
         }
-
-        com.example.coolbox.util.CloudSyncManager.fetchBackups(serverUrl) { list, error ->
+        
+        CloudSyncManager.fetchBackupFiles(url) { list, error ->
             runOnUiThread {
                 progress.dismiss()
-                if (error != null) {
-                    Toast.makeText(this, "获取失败: $error", Toast.LENGTH_LONG).show()
-                    return@runOnUiThread
-                }
                 if (list.isNullOrEmpty()) {
-                    Toast.makeText(this, "暂无可用快照", Toast.LENGTH_SHORT).show()
-                    return@runOnUiThread
+                    Toast.makeText(this, "暂无备份文件: $error", Toast.LENGTH_SHORT).show()
+                } else {
+                    AlertDialog.Builder(this)
+                        .setTitle("选择云端备份")
+                        .setItems(list.toTypedArray()) { _, which ->
+                            executeNasRestore(url, list[which])
+                        }
+                        .show()
                 }
-
-                val displayList = list.map { it.time }.toTypedArray()
-
-                AlertDialog.Builder(this)
-                    .setTitle("🕒 选择云端快照 (Time Machine)")
-                    .setItems(displayList) { _, which ->
-                        val selected = list[which]
-                        AlertDialog.Builder(this)
-                            .setTitle("确认恢复？")
-                            .setMessage("确定要将数据回滚至 [${displayList[which]}] 吗？\n\n⚠️ 注意：恢复后将覆盖当前全库数据。")
-                            .setPositiveButton("确定回滚") { _, _ ->
-                                executeRestore(serverUrl, selected.filename, viewModel)
-                            }
-                            .setNegativeButton("取消", null)
-                            .show()
-                    }
-                    .setNegativeButton("关闭", null)
-                    .show()
             }
         }
     }
 
-    private fun executeRestore(serverUrl: String, filename: String, viewModel: MainViewModel) {
+    private fun executeNasRestore(serverUrl: String, filename: String) {
         val progress = android.app.ProgressDialog(this).apply {
-            setMessage("正在启动时光机回滚...")
-            setCancelable(false)
+            setMessage("正在从 NAS 下载...")
             show()
         }
-
-        com.example.coolbox.util.CloudSyncManager.restoreBackup(serverUrl, filename) { success, error ->
+        val tempFile = java.io.File(cacheDir, "nas_restore_temp.cbk")
+        CloudSyncManager.downloadBackupFile(serverUrl, filename, tempFile) { success, error ->
             runOnUiThread {
                 progress.dismiss()
                 if (success) {
-                    Toast.makeText(this, "回滚成功！正在同步最新快照...", Toast.LENGTH_LONG).show()
-                    com.example.coolbox.util.CloudSyncManager.downloadDatabase(this, serverUrl) { _, _ ->
-                    }
+                    val uri = androidx.core.content.FileProvider.getUriForFile(this@SetupActivity, "${packageName}.fileprovider", tempFile)
+                    showRestoreModeDialog(uri)
                 } else {
-                    Toast.makeText(this, "回滚失败: $error", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "下载失败: $error", Toast.LENGTH_LONG).show()
                 }
             }
         }
     }
+
+    private fun restartApp(msg: String) {
+        Toast.makeText(this, "$msg，正在重启...", Toast.LENGTH_LONG).show()
+        val intent = Intent(this, MainActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        startActivity(intent)
+        finish()
+    }
 }
-// Version: V3.0.0-Pre22

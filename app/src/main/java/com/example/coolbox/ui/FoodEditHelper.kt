@@ -8,6 +8,7 @@ import androidx.appcompat.app.AlertDialog
 import com.example.coolbox.MainActivity
 import com.example.coolbox.data.FoodEntity
 import com.example.coolbox.legacy.R
+import com.example.coolbox.util.EquipmentManager
 import com.example.coolbox.util.formatQuantity
 import java.text.SimpleDateFormat
 import java.util.*
@@ -64,11 +65,30 @@ class FoodEditHelper(private val context: Context, private val viewModel: MainVi
         val unitSpinner = view.findViewById<Spinner>(R.id.unitSpinner)
         val datePicker = view.findViewById<DatePicker>(R.id.datePicker)
 
-        val units = listOf("个", "kg", "斤", "袋", "盒", "瓶", "升")
+        val units = if (viewModel.currentSpace.value == 1) {
+            listOf("盒", "粒", "支", "袋", "瓶", "支", "个")
+        } else {
+            listOf("个", "kg", "斤", "袋", "盒", "瓶", "升")
+        }
 
-        // Setup Device & Zone Spinners (V2.2 Dynamic Mapping)
-        val deviceZoneMap = viewModel.deviceZoneMap.value ?: emptyMap()
-        val allDevices = deviceZoneMap.keys.toList().ifEmpty { listOf("我的冰箱", "小冰柜") }
+        // Setup Device & Zone Spinners (Direct calculation from fridges.value for instantaneous data)
+        val allFullNames = viewModel.fridges.value ?: emptyList()
+        val deviceZoneMap = allFullNames.groupBy { EquipmentManager.extractBase(it) }
+            .mapValues { entry -> 
+                val base = entry.key
+                val zs = entry.value.map { EquipmentManager.extractZone(it, base) }
+                    .filter { it.isNotEmpty() && it != base && it != "默认层" }
+                    .distinct().toMutableList()
+                
+                // Ensure Refrigerator/Freezer requirements (Standard Templates v4.1.6)
+                val standard = EquipmentManager.getStandardZones(base)
+                standard.forEach { if (!zs.contains(it)) zs.add(it) }
+                
+                if (zs.isEmpty()) zs.add("默认层")
+                zs.sortedWith { s1, s2 -> EquipmentManager.normalizeToDigit(s1).compareTo(EquipmentManager.normalizeToDigit(s2)) }
+            }
+            
+        val allDevices = deviceZoneMap.keys.toList().filter { it.isNotBlank() }.ifEmpty { listOf("我的冰箱") }
         val deviceAdapter = android.widget.ArrayAdapter(context, R.layout.spinner_item_dark, allDevices)
         deviceAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item_dark)
         deviceSpinner.adapter = deviceAdapter
@@ -82,9 +102,11 @@ class FoodEditHelper(private val context: Context, private val viewModel: MainVi
 
         if (existingItem != null) {
             val loc = existingItem.fridgeName.trim()
-            val parts = loc.split(" - ")
-            if (parts.size == 2 && allDevices.contains(parts[0]) && deviceZoneMap[parts[0]]?.contains(parts[1]) == true) {
-                val dIdx = allDevices.indexOf(parts[0])
+            val base = EquipmentManager.extractBase(loc)
+            val zone = EquipmentManager.extractZone(loc, base)
+            
+            if (allDevices.contains(base) && deviceZoneMap[base]?.contains(zone) == true) {
+                val dIdx = allDevices.indexOf(base)
                 if (dIdx >= 0) deviceSpinner.setSelection(dIdx)
                 // Zone selection will happen in onItemSelected of device
             } else {
@@ -100,38 +122,43 @@ class FoodEditHelper(private val context: Context, private val viewModel: MainVi
         }
         deviceSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: android.widget.AdapterView<*>?, v: View?, position: Int, id: Long) {
+                if (position < 0 || position >= allDevices.size) return
                 val selectedDevice = allDevices[position]
                 val zones = deviceZoneMap[selectedDevice] ?: emptyList()
+                
+                android.util.Log.d("CoolBox", "Spinner selected: $selectedDevice, zones found: ${zones.size}")
 
-                // 核心防御：判断是不是 Android 系统的“幽灵空跑初始化”
-                val isGhostEvent = zoneAdapter.count == zones.size && (0 until zones.size).all { zoneAdapter.getItem(it) == zones[it] }
-
-                if (!isGhostEvent) {
-                    zoneAdapter.clear()
+                zoneAdapter.clear()
+                if (zones.isNotEmpty()) {
                     zoneAdapter.addAll(zones)
-                    zoneAdapter.notifyDataSetChanged()
+                } else {
+                    zoneAdapter.add("默认层")
                 }
+                zoneAdapter.notifyDataSetChanged()
 
                 val pendingZone = deviceSpinner.tag as? String
-
                 if (pendingZone != null) {
                     val zIdx = zones.indexOfFirst { it.contains(pendingZone) || pendingZone.contains(it) }
-                    if (zIdx >= 0) {
-                        zoneSpinner.setSelection(zIdx)
-                    } else if (!isGhostEvent) {
-                        zoneSpinner.setSelection(0)
-                    }
+                    if (zIdx >= 0) zoneSpinner.setSelection(zIdx)
+                    else zoneSpinner.setSelection(0)
                     deviceSpinner.tag = null
                 } else {
-                    // 🛑 如果是幽灵事件且没有 Tag，绝对不准重置为 0！保持刚算出的冷藏！
-                    if (!isGhostEvent) {
-                        zoneSpinner.setSelection(0)
-                    }
+                    zoneSpinner.setSelection(0)
                 }
                 
                 if (isDirty) { isDirty = false; textDirtyLocation.visibility = View.GONE }
             }
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+        }
+
+        // 🛑 CRITICAL: Manually trigger the first update because Android Spinners are inconsistent with initial events
+        val initialPos = deviceSpinner.selectedItemPosition
+        if (initialPos >= 0) {
+            val selectedDevice = allDevices[initialPos]
+            val zones = deviceZoneMap[selectedDevice] ?: emptyList()
+            zoneAdapter.clear()
+            if (zones.isNotEmpty()) zoneAdapter.addAll(zones) else zoneAdapter.add("默认层")
+            zoneAdapter.notifyDataSetChanged()
         }
 
         val layoutRemark = view.findViewById<LinearLayout>(R.id.layoutRemark)
@@ -178,6 +205,15 @@ class FoodEditHelper(private val context: Context, private val viewModel: MainVi
                         } else {
                             layoutNewItemName.visibility = View.GONE
                             applySmartLinkage(selectedCategory, selectedItem, deviceSpinner, units, unitSpinner, allDevices)
+                            
+                            // Build 4.0: Smart Sensing for existing items in medicine mode
+                            if (viewModel.currentSpace.value == 1) {
+                                val (recCat, _) = viewModel.getMedicineRecommendation(selectedItem)
+                                val catIdx = categories.indexOf(recCat)
+                                if (catIdx >= 0 && catIdx != categorySpinner.selectedItemPosition) {
+                                    categorySpinner.setSelection(catIdx)
+                                }
+                            }
                         }
                     }
                     override fun onNothingSelected(p: android.widget.AdapterView<*>?) {}
@@ -192,6 +228,21 @@ class FoodEditHelper(private val context: Context, private val viewModel: MainVi
             }
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
         }
+
+        // Build 4.0: TextWatcher for real-time sensing in "New Item" mode
+        editNewItemName.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                if (viewModel.currentSpace.value == 1 && s != null && s.isNotEmpty()) {
+                    val (recCat, _) = viewModel.getMedicineRecommendation(s.toString())
+                    val catIdx = categories.indexOf(recCat)
+                    if (catIdx >= 0 && catIdx != categorySpinner.selectedItemPosition) {
+                        categorySpinner.setSelection(catIdx)
+                    }
+                }
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
 
         // Setup Unit Spinner
         val unitAdapter = android.widget.ArrayAdapter(context, R.layout.spinner_item_dark, units)
@@ -311,7 +362,11 @@ class FoodEditHelper(private val context: Context, private val viewModel: MainVi
                 
                 val selectedDevice = deviceSpinner.selectedItem?.toString() ?: ""
                 val selectedZone = zoneSpinner.selectedItem?.toString() ?: ""
-                val targetLocation = if (isDirty) originalDirtyLocation else "$selectedDevice - $selectedZone"
+                val targetLocation = if (isDirty) {
+                    originalDirtyLocation 
+                } else {
+                    EquipmentManager.formatFullName(selectedDevice, selectedZone)
+                }
                 
                 val qtyStr = editQuantity.text.toString()
                 val qty = if (qtyStr.isEmpty()) 1.0 else (qtyStr.toDoubleOrNull() ?: 1.0)
@@ -340,6 +395,9 @@ class FoodEditHelper(private val context: Context, private val viewModel: MainVi
                             unit = unit,
                             expiryDateMs = expiryMs,
                             portions = portions,
+                            weightPerPortion = if (portions > 0) {
+                                (java.math.BigDecimal(qty.toString()).divide(java.math.BigDecimal(portions.toString()), 4, java.math.RoundingMode.HALF_UP)).toDouble()
+                            } else qty,
                             fridgeName = targetLocation,
                             remark = remark,
                             lastModifiedMs = viewModel.nowMs()
@@ -355,4 +413,4 @@ class FoodEditHelper(private val context: Context, private val viewModel: MainVi
             .show()
     }
 }
-// Version: V2.9.0-RC3 (Refactor - Final)
+// Version: V4.0.8 (Hierarchy Refine)

@@ -13,8 +13,14 @@ interface FoodDao {
     @Query("SELECT * FROM food_items")
     suspend fun getAllIncludeDeleted(): List<FoodEntity>
 
+    @Query("SELECT * FROM food_items")
+    fun getAllFoodsSync(): List<FoodEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertItem(item: FoodEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(items: List<FoodEntity>)
 
     @Update
     suspend fun updateItem(item: FoodEntity)

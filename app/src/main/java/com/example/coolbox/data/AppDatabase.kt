@@ -6,9 +6,10 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [FoodEntity::class], version = 7, exportSchema = false)
+@Database(entities = [FoodEntity::class, FridgeSettings::class], version = 13, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun foodDao(): FoodDao
+    abstract fun fridgeSettingsDao(): FridgeSettingsDao
 
     companion object {
         private val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
@@ -38,6 +39,18 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_11_12 = object : androidx.room.migration.Migration(11, 12) {
+            override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE food_items ADD COLUMN itemType INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_12_13 = object : androidx.room.migration.Migration(12, 13) {
+            override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+                database.execSQL("CREATE TABLE IF NOT EXISTS `fridge_settings` (`fridgeName` TEXT NOT NULL, `spaceAffinity` INTEGER NOT NULL DEFAULT 2, PRIMARY KEY(`fridgeName`))")
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -54,7 +67,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "coolbox_database"
                 )
                 .setJournalMode(RoomDatabase.JournalMode.TRUNCATE) // ⚠️ 修改 1：从底层直接废掉 WAL，强制单文件实时写入
-                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_11_12, MIGRATION_12_13)
                 .fallbackToDestructiveMigration()
                 .build()
                 @Suppress("UNCHECKED_CAST")
@@ -93,6 +106,28 @@ db.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)", null).use { 
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+            }
+        }
+
+        fun importDatabase(context: Context): Boolean {
+            return try {
+                closeDatabase()
+                val dbFile = context.getDatabasePath("coolbox_database")
+                val exportDir = android.os.Environment.getExternalStoragePublicDirectory("CoolBox")
+                val syncFile = java.io.File(exportDir, "sync.db")
+
+                if (!syncFile.exists()) return false
+
+                syncFile.inputStream().use { input ->
+                    dbFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                android.util.Log.d("CoolBox", "DB Imported from sync.db")
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
             }
         }
     }

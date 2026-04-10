@@ -31,13 +31,24 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
-                <ImageView
-                    android:id="@+id/itemIcon"
+                <FrameLayout
                     android:layout_width="64dp"
                     android:layout_height="64dp"
-                    android:layout_margin="8dp"
-                    android:scaleType="centerInside"
-                    android:src="@drawable/cat_meat" />
+                    android:layout_margin="8dp">
+                    <ImageView
+                        android:id="@+id/itemIcon"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/cat_meat" />
+                    <TextView
+                        android:id="@+id/itemIconEmoji"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:textSize="40sp"
+                        android:visibility="gone" />
+                </FrameLayout>
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -130,8 +141,8 @@
                 android:text="拿走\n1 份"
                 android:textSize="11sp"
                 android:lineSpacingExtra="-2dp"
-                android:background="@drawable/bg_btn_rounded"
-                android:textColor="#FF2E7D32"
+                android:background="@drawable/bg_btn_item_one"
+                android:textColor="#FF616161"
                 android:textAllCaps="false"
                 android:minHeight="36dp"
                 android:padding="2dp"
@@ -144,8 +155,8 @@
                 android:layout_weight="1"
                 android:text="全取"
                 android:textSize="11sp"
-                android:background="@drawable/bg_btn_rounded_error"
-                android:textColor="#FF0D47A1"
+                android:background="@drawable/bg_btn_item_all"
+                android:textColor="#FF1976D2"
                 android:textAllCaps="false"
                 android:minHeight="36dp"
                 android:padding="2dp" />

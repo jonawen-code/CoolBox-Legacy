@@ -97,6 +97,66 @@
                     android:background="?android:attr/selectableItemBackground"
                     android:contentDescription="Settings" />
             </RelativeLayout>
+            
+            <!-- Row 1.5: Adaptive 3-in-1 Header (V4.0.0-RC2) -->
+            <LinearLayout
+                android:id="@+id/threeInOneHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:background="#FFFFFF">
+
+                <!-- Compact Switcher -->
+                <LinearLayout
+                    android:id="@+id/spaceSwitcher"
+                    android:layout_width="wrap_content"
+                    android:layout_height="42dp"
+                    android:orientation="horizontal">
+                    <Button
+                        android:id="@+id/btnSpaceFood"
+                        android:layout_width="48dp"
+                        android:layout_height="match_parent"
+                        android:text="🥗"
+                        android:textSize="20sp"
+                        android:background="@drawable/bg_tab_left_active"
+                        android:textColor="#FFFFFF" />
+                    <Button
+                        android:id="@+id/btnSpaceMedicine"
+                        android:layout_width="48dp"
+                        android:layout_height="match_parent"
+                        android:text="💊"
+                        android:textSize="20sp"
+                        android:background="@drawable/bg_tab_right_inactive"
+                        android:textColor="#FFFFFF" />
+                </LinearLayout>
+
+                <EditText
+                    android:id="@+id/searchEditText"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_weight="1"
+                    android:layout_marginLeft="10dp"
+                    android:hint="🔍 搜 索 ..."
+                    android:textSize="14sp"
+                    android:paddingLeft="12dp"
+                    android:background="@drawable/bg_search_input"
+                    android:singleLine="true" />
+
+                <ImageButton
+                    android:id="@+id/btnSort"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:layout_marginLeft="8dp"
+                    android:src="@drawable/ic_sort"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:scaleType="centerInside"
+                    android:contentDescription="Sort" />
+            </LinearLayout>
 
             <!-- Time Machine Dashboard (Wraps below title) -->
             <LinearLayout
@@ -115,38 +175,7 @@
                 <Button android:id="@+id/btnTimeReset" android:layout_width="wrap_content" android:layout_height="28dp" android:text="回到今天" android:textSize="11sp" android:minHeight="0dp" android:minWidth="60dp" android:background="@color/accent_danger_bg" android:textColor="@color/accent_danger" />
             </LinearLayout>
 
-            <!-- Search and Sort Bar -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingLeft="10dp"
-                android:paddingRight="10dp"
-                android:paddingBottom="8dp"
-                android:gravity="center_vertical"
-                android:background="#FFFFFF">
 
-                <EditText
-                    android:id="@+id/searchEditText"
-                    android:layout_width="0dp"
-                    android:layout_height="40dp"
-                    android:layout_weight="1"
-                    android:hint="🔍 搜索食品名称/备注..."
-                    android:textSize="14sp"
-                    android:paddingLeft="12dp"
-                    android:background="@drawable/bg_search_input"
-                    android:singleLine="true" />
-
-                <ImageButton
-                    android:id="@+id/btnSort"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginLeft="8dp"
-                    android:src="@drawable/ic_sort"
-                    android:background="?android:attr/selectableItemBackground"
-                    android:scaleType="centerInside"
-                    android:contentDescription="Sort" />
-            </LinearLayout>
         </LinearLayout>
 
         <!-- Row 2: Navigation (Tabs & Quick Entry) -->
@@ -160,6 +189,8 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp"
                 android:paddingBottom="4dp">
                 <LinearLayout
                     android:id="@+id/fridgeTabs"

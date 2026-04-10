@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+    
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="备份与恢复"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#333333" />
+        
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="管理本地备份文件 (.cbk) 及数据导出"
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:layout_marginBottom="24dp" />
+
+    <Button
+        android:id="@+id/btnExportBackup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="立即导出备份 (Export .cbk)"
+        android:layout_marginBottom="12dp" />
+        
+    <Button
+        android:id="@+id/btnImportBackup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="从本地导入备份 (Import .cbk)"
+        android:layout_marginBottom="24dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="CSV 导出 (用于 Excel 查看):"
+        android:textSize="14sp"
+        android:layout_marginBottom="8dp" />
+        
+    <Button
+        android:id="@+id/btnExportCSV"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="导出为 CSV 文件" />
+</LinearLayout>

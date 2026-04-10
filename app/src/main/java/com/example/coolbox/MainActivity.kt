@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.content.Intent
 import com.example.coolbox.legacy.R
 import com.example.coolbox.legacy.BuildConfig
+import com.example.coolbox.util.EquipmentManager
 import com.example.coolbox.util.formatQuantity
 import android.widget.Button
 import android.widget.LinearLayout
@@ -54,10 +55,10 @@ class MainActivity : AppCompatActivity() {
             return
         }
         
-        findViewById<TextView>(R.id.txtAppVersion).text = "V3.0.0-Pre22 (核武自愈版)"
-        // Version: V3.0.0-Pre9
-        findViewById<View>(R.id.btnSettings).setOnClickListener {
-            startActivity(Intent(this, SetupActivity::class.java))
+        findViewById<TextView>(R.id.txtAppVersion)?.text = "V${BuildConfig.VERSION_NAME} (全能物资空间版)"
+        
+        findViewById<View>(R.id.btnSettings)?.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
         }
         
         // ----------------------------------------------------------------
@@ -65,12 +66,18 @@ class MainActivity : AppCompatActivity() {
         // ----------------------------------------------------------------
         findViewById<View>(R.id.btnRefresh)?.setOnClickListener {
             android.widget.Toast.makeText(this, "正在刷新...", android.widget.Toast.LENGTH_SHORT).show()
-            com.example.coolbox.util.CloudSyncManager.downloadDatabase(this, viewModel.syncServerUrl) { success, _ ->
+            com.example.coolbox.util.CloudSyncManager.downloadDatabase(this, viewModel.syncUrl.value ?: "") { success, _ ->
                 runOnUiThread {
                     if (success) {
-                        // Centralized VM-driven state reset for V1.0 compliance
-                        viewModel.onSyncComplete()
-                        android.widget.Toast.makeText(this@MainActivity, "同步完成 (已跳转至汇总)", android.widget.Toast.LENGTH_SHORT).show()
+                        // !!! CRITICAL FIX !!!
+                        // After downloading sync.db, we MUST import it into the internal Room database
+                        if (com.example.coolbox.data.AppDatabase.importDatabase(this@MainActivity)) {
+                            // Centralized VM-driven state reset for V1.0 compliance
+                            viewModel.onSyncComplete()
+                            android.widget.Toast.makeText(this@MainActivity, "同步完成 (已应用最新数据)", android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            android.widget.Toast.makeText(this@MainActivity, "导入本地数据库失败", android.widget.Toast.LENGTH_SHORT).show()
+                        }
                     } else {
                         android.widget.Toast.makeText(this@MainActivity, "网络故障，请检查 NAS 设置", android.widget.Toast.LENGTH_LONG).show()
                     }
@@ -78,21 +85,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // ================================================================
-        // 🚀 2. 隐藏的核武器 (长按)：触发数据自愈并强行推给 NAS
-        // ================================================================
-        findViewById<View>(R.id.btnRefresh)?.setOnLongClickListener {
-            android.widget.Toast.makeText(this, "⚠️ 启动核武级修复：提取活体数据、重建新库并强推...", android.widget.Toast.LENGTH_LONG).show()
-            
-            // 触发 MainViewModel 里刚写的自愈方法
-            viewModel.forceSyncAndHealDatabase { success, message ->
-                runOnUiThread {
-                    // 修复完成后弹窗通知结果
-                    android.widget.Toast.makeText(this@MainActivity, message as CharSequence, android.widget.Toast.LENGTH_LONG).show()
-                }
-            }
-            true // 返回 true 表示我们消费了这个长按事件，不会触发单击
-        }
         // ================================================================
 
         // Search & Sort Initialization
@@ -106,7 +98,7 @@ class MainActivity : AppCompatActivity() {
             override fun afterTextChanged(s: android.text.Editable?) {}
         })
 
-        findViewById<View>(R.id.btnSort).setOnClickListener { view ->
+        findViewById<View>(R.id.btnSort)?.setOnClickListener { view ->
             val popup = androidx.appcompat.widget.PopupMenu(this, view)
             popup.menu.add("按保质期排序 ${if (sortType == "EXPIRY") "✅" else ""}").setOnMenuItemClickListener { sortType = "EXPIRY"; updateList(viewModel.allFood.value, viewModel.currentFridge.value); true }
             popup.menu.add("按名称排序 ${if (sortType == "NAME") "✅" else ""}").setOnMenuItemClickListener { sortType = "NAME"; updateList(viewModel.allFood.value, viewModel.currentFridge.value); true }
@@ -116,47 +108,45 @@ class MainActivity : AppCompatActivity() {
             popup.show()
         }
 
+        val fab = findViewById<FloatingActionButton>(R.id.addFoodFab)
         val fridgeTabsContainer = findViewById<LinearLayout>(R.id.fridgeTabs)
         val btnSummary = findViewById<Button>(R.id.btnSummary)
         val recyclerView = findViewById<RecyclerView>(R.id.foodList)
-        val fab = findViewById<FloatingActionButton>(R.id.addFoodFab)
 
-        btnSummary.setOnClickListener { viewModel.setFridge(null) } // null means Summary
+        // Space Switcher Initialization
+        val btnSpaceFood = findViewById<Button>(R.id.btnSpaceFood)
+        val btnSpaceMedicine = findViewById<Button>(R.id.btnSpaceMedicine)
 
-        viewModel.isSetupComplete.observe(this) { completed ->
-            if (!completed) {
-                startActivity(Intent(this, SetupActivity::class.java))
-                finish()
-            }
-        }
+        btnSpaceFood?.setOnClickListener { viewModel.setSpace(0) }
+        btnSpaceMedicine?.setOnClickListener { viewModel.setSpace(1) }
 
-        findViewById<View>(R.id.btnScaleDown).setOnClickListener {
-            viewModel.setFontScale((viewModel.fontScale.value ?: 1.0f) - 0.1f)
-        }
-        findViewById<View>(R.id.btnScaleUp).setOnClickListener {
-            viewModel.setFontScale((viewModel.fontScale.value ?: 1.0f) + 0.1f)
-        }
-        
         // Quick Entry Buttons - Dynamically generated from settings categories
         val quickEntryBar = findViewById<LinearLayout>(R.id.quickEntryBar)
         fun buildQuickButtons() {
+            if (quickEntryBar == null) return
             quickEntryBar.removeAllViews()
             val categories = viewModel.getCatalogCategories()
-            val blueLight = resources.getColor(R.color.blue_light)
-            val blueDark = resources.getColor(R.color.blue_dark)
+            
+            val space = viewModel.currentSpace.value ?: 0
+            val activeColor = if (space == 1) resources.getColor(R.color.med_primary) else resources.getColor(R.color.food_primary)
+            val lightColor = if (space == 1) resources.getColor(R.color.blue_light) else resources.getColor(R.color.green_light)
+            
             categories.forEach { categoryName ->
                 val btn = Button(this).apply {
                     text = "+$categoryName"
                     textSize = 15f
                     typeface = android.graphics.Typeface.DEFAULT_BOLD
-                    setBackgroundColor(blueLight)
-                    setTextColor(blueDark)
+                    setBackgroundColor(lightColor)
+                    setTextColor(activeColor)
                     minHeight = 0
                     minWidth = 0
+                    setPadding(24, 0, 24, 0) // Add horizontal padding for breathability
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         (56 * resources.displayMetrics.density).toInt()
-                    )
+                    ).apply {
+                        setMargins(12, 0, 12, 0) // Increased spacing
+                    }
                     setOnClickListener { editHelper.showAddOrEditFoodDialog(categoryToSelect = categoryName) }
                 }
                 quickEntryBar.addView(btn)
@@ -164,6 +154,54 @@ class MainActivity : AppCompatActivity() {
         }
         buildQuickButtons()
         viewModel.categories.observe(this) { buildQuickButtons() }
+
+        viewModel.currentSpace.observe(this) { space ->
+            val activeColor = android.graphics.Color.WHITE
+            val inactiveColor = android.graphics.Color.parseColor("#666666")
+            
+            val foodPrimary = resources.getColor(R.color.food_primary)
+            val medPrimary = resources.getColor(R.color.med_primary)
+            
+            if (space == 1) {
+                // Medicine Mode (90% Blue Identity)
+                btnSpaceMedicine.setBackgroundResource(R.drawable.bg_tab_right_active)
+                btnSpaceMedicine.setTextColor(activeColor)
+                btnSpaceFood.setBackgroundResource(R.drawable.bg_tab_left_inactive)
+                btnSpaceFood.setTextColor(inactiveColor)
+                
+                findViewById<TextView>(R.id.appTitle).setTextColor(medPrimary)
+                recyclerView.setBackgroundColor(android.graphics.Color.parseColor("#F5F5F5"))
+            } else {
+                // Food Mode (90% Green Identity)
+                btnSpaceFood.setBackgroundResource(R.drawable.bg_tab_left_active)
+                btnSpaceFood.setTextColor(activeColor)
+                btnSpaceMedicine.setBackgroundResource(R.drawable.bg_tab_right_inactive)
+                btnSpaceMedicine.setTextColor(inactiveColor)
+                
+                findViewById<TextView>(R.id.appTitle).setTextColor(foodPrimary)
+                recyclerView.setBackgroundColor(android.graphics.Color.WHITE)
+            }
+            
+            buildQuickButtons()
+            updateList(viewModel.allFood.value, viewModel.currentFridge.value)
+        }
+
+        btnSummary?.setOnClickListener { viewModel.setFridge(null) } // null means Summary
+
+        viewModel.isSetupComplete.observe(this) { completed ->
+            if (!completed) {
+                val intent = Intent(this, SetupActivity::class.java)
+                startActivity(intent)
+                finish()
+            }
+        }
+
+        findViewById<View>(R.id.btnScaleDown)?.setOnClickListener {
+            viewModel.setFontScale((viewModel.fontScale.value ?: 1.0f) - 0.1f)
+        }
+        findViewById<View>(R.id.btnScaleUp)?.setOnClickListener {
+            viewModel.setFontScale((viewModel.fontScale.value ?: 1.0f) + 0.1f)
+        }
 
         adapter = FoodAdapter(
             currentFridge = { viewModel.currentFridge.value },
@@ -181,7 +219,8 @@ class MainActivity : AppCompatActivity() {
             },
             getFontScale = { viewModel.fontScale.value ?: 1.0f },
             getNowMs = { viewModel.nowMs() },
-            getFridgeBases = { viewModel.fridgeBases.value ?: emptyList() }
+            getFridgeBases = { viewModel.fridgeBases.value ?: emptyList() },
+            getCurrentSpace = { viewModel.currentSpace.value ?: 0 }
         )
         
         viewModel.fontScale.observe(this) { scale ->
@@ -194,20 +233,20 @@ class MainActivity : AppCompatActivity() {
         viewModel.timeOffsetMs.observe(this) { offset ->
             adapter.notifyDataSetChanged()
             val df = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            findViewById<TextView>(R.id.txtCurrentSimTime).text = "🕒 模拟时间: ${df.format(Date(viewModel.nowMs()))}"
+            findViewById<TextView>(R.id.txtCurrentSimTime)?.text = "🕒 模拟时间: ${df.format(Date(viewModel.nowMs()))}"
         }
 
         // Dashboard Time Controls
-        findViewById<View>(R.id.btnTimePlus1D).setOnClickListener { 
+        findViewById<View>(R.id.btnTimePlus1D)?.setOnClickListener { 
             viewModel.addTimeOffset(24 * 60 * 60 * 1000L)
         }
-        findViewById<View>(R.id.btnTimePlus1W).setOnClickListener { 
+        findViewById<View>(R.id.btnTimePlus1W)?.setOnClickListener { 
             viewModel.addTimeOffset(7 * 24 * 60 * 60 * 1000L)
         }
-        findViewById<View>(R.id.btnTimePlus1M).setOnClickListener { 
+        findViewById<View>(R.id.btnTimePlus1M)?.setOnClickListener { 
             viewModel.addTimeOffset(30 * 24 * 60 * 60 * 1000L)
         }
-        findViewById<View>(R.id.btnTimeReset).setOnClickListener { 
+        findViewById<View>(R.id.btnTimeReset)?.setOnClickListener { 
             viewModel.resetTimeOffset()
         }
         
@@ -223,20 +262,19 @@ class MainActivity : AppCompatActivity() {
             updateList(viewModel.allFood.value, currentFridge)
         }
 
-        btnSummary.setOnClickListener { viewModel.setFridge(null) } // null means Summary
+        btnSummary?.setOnClickListener { viewModel.setFridge(null) } // null means Summary
 
-        // Observe Fridge Bases to create tabs (Unique devices)
-        viewModel.fridgeBases.observe(this) { bases ->
+        // Observe Filtered Fridges (Space Affinity Aware)
+        viewModel.filteredFridges.observe(this) { bases ->
             // Safely remove all dynamic tabs (all children after btnSummary)
-            val summaryIndex = fridgeTabsContainer.indexOfChild(btnSummary)
+            val summaryIndex = fridgeTabsContainer?.indexOfChild(btnSummary) ?: -1
             if (summaryIndex >= 0) {
-                while (fridgeTabsContainer.childCount > summaryIndex + 1) {
+                while (fridgeTabsContainer!!.childCount > summaryIndex + 1) {
                     fridgeTabsContainer.removeViewAt(summaryIndex + 1)
                 }
             } else {
-                // If btnSummary is lost (unlikely), clear all and re-add
-                fridgeTabsContainer.removeAllViews()
-                fridgeTabsContainer.addView(btnSummary)
+                fridgeTabsContainer?.removeAllViews()
+                if (btnSummary != null) fridgeTabsContainer?.addView(btnSummary)
             }
             
             bases.forEach { fridgeName ->
@@ -255,13 +293,18 @@ class MainActivity : AppCompatActivity() {
                 fridgeTabsContainer.addView(btn)
             }
             updateTabHighlights(fridgeTabsContainer, viewModel.currentFridge.value)
+            
+            // If current fridge is hidden in this space, revert to summary
+            if (viewModel.currentFridge.value != null && !bases.contains(viewModel.currentFridge.value)) {
+                viewModel.setFridge(null)
+            }
         }
 
         viewModel.allFood.observe(this) { food ->
             updateList(food, viewModel.currentFridge.value)
         }
 
-        fab.setOnClickListener {
+        fab?.setOnClickListener {
             editHelper.showAddOrEditFoodDialog()
         }
 
@@ -312,15 +355,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateList(allFood: List<FoodEntity>?, currentFridge: String?) {
         if (allFood != null) {
-            var filtered = if (currentFridge == null) {
-                allFood 
-            } else {
+            val space = viewModel.currentSpace.value ?: 0
+            var filtered = allFood.filter { it.itemType == space }
+
+            if (currentFridge != null) {
                 // Robust filter: match exact, prefix, or normalized (ignore spaces)
                 val normalizedCurrent = currentFridge.replace(" ", "")
-                allFood.filter { 
-                    it.fridgeName == currentFridge || 
-                    it.fridgeName.startsWith("$currentFridge ") ||
-                    it.fridgeName.replace(" ", "") == normalizedCurrent
+                filtered = filtered.filter { 
+                    EquipmentManager.extractBase(it.fridgeName) == currentFridge || 
+                    it.fridgeName.startsWith("$currentFridge(") // Special case for legacy bracket aliases
                 }
             }
 
@@ -332,14 +375,25 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // Apply Sorting
+            // Build 40: ALWAYS Sort by Expiry status first (Expired at TOP)
+            val now = viewModel.nowMs()
             val sorted = when (sortType) {
-                "NAME" -> if (isAscending) filtered.sortedBy { it.name } else filtered.sortedByDescending { it.name }
-                "CATEGORY" -> if (isAscending) filtered.sortedBy { it.category } else filtered.sortedByDescending { it.category }
-                else -> if (isAscending) filtered.sortedBy { it.expiryDateMs } else filtered.sortedByDescending { it.expiryDateMs }
+                "NAME" -> filtered.sortedWith(compareByDescending<FoodEntity> { it.expiryDateMs < now }.thenBy { it.name })
+                "CATEGORY" -> filtered.sortedWith(compareByDescending<FoodEntity> { it.expiryDateMs < now }.thenBy { it.category })
+                else -> filtered.sortedWith(compareByDescending<FoodEntity> { it.expiryDateMs < now }.thenBy { it.expiryDateMs })
+            }
+            
+            // Apply Ascending/Descending only to the secondary sort (within the status groups)
+            // or we can allow it to flip the overall list if we want, but "Expired at top" is usually a fixed priority.
+            // Let's stick to "Expired first, then sorted within groups by user preference"
+            val finalSorted = if (isAscending) sorted else {
+                // To keep expired at top but reverse the internal order:
+                val expired = sorted.filter { it.expiryDateMs < now }.reversed()
+                val nonExpired = sorted.filter { it.expiryDateMs >= now }.reversed()
+                expired + nonExpired
             }
 
-            adapter.submitList(sorted)
+            adapter.submitList(finalSorted)
         }
     }
 
@@ -397,8 +451,10 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun updateTabHighlights(container: LinearLayout, activeFridge: String?) {
-        val blue = android.graphics.Color.parseColor("#03A9F4")
+    private fun updateTabHighlights(container: LinearLayout?, activeFridge: String?) {
+        if (container == null) return
+        val space = viewModel.currentSpace.value ?: 0
+        val activeColor = if (space == 1) resources.getColor(R.color.med_primary) else resources.getColor(R.color.food_primary)
         val white = android.graphics.Color.WHITE
         val lightGray = android.graphics.Color.parseColor("#FAFAFA")
         val darkGray = android.graphics.Color.parseColor("#333333")
@@ -413,7 +469,7 @@ class MainActivity : AppCompatActivity() {
                     else -> view.text == activeFridge
                 }
                 if (isActive) {
-                    view.setBackgroundColor(blue)
+                    view.setBackgroundColor(activeColor)
                     view.setTextColor(white)
                 } else {
                     view.setBackgroundColor(lightGray)

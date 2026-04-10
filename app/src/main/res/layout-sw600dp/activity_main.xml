@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:animateLayoutChanges="true">
+
+        <!-- Row 1: Header (Tablet Optimized) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:gravity="center_vertical"
+            android:background="#FFFFFF">
+
+            <TextView
+                android:id="@+id/appTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name"
+                android:textSize="36sp"
+                android:textStyle="bold"
+                android:textColor="@color/blue_primary"
+                android:layout_marginRight="16dp" />
+
+            <!-- Adaptive 3-in-1 Header (Tablet) -->
+            <LinearLayout
+                android:id="@+id/threeInOneHeader"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <LinearLayout
+                    android:id="@+id/spaceSwitcher"
+                    android:layout_width="wrap_content"
+                    android:layout_height="52dp"
+                    android:orientation="horizontal">
+                    <Button
+                        android:id="@+id/btnSpaceFood"
+                        android:layout_width="160dp"
+                        android:layout_height="match_parent"
+                        android:text="🥗 食品空间"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/bg_tab_left_active"
+                        android:textColor="#FFFFFF" />
+                    <Button
+                        android:id="@+id/btnSpaceMedicine"
+                        android:layout_width="160dp"
+                        android:layout_height="match_parent"
+                        android:text="💊 药箱空间"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/bg_tab_right_inactive"
+                        android:textColor="#FFFFFF" />
+                </LinearLayout>
+
+                <EditText
+                    android:id="@+id/searchEditText"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:layout_marginLeft="16dp"
+                    android:hint="🔍 搜索物品、分类或位置..."
+                    android:textSize="16sp"
+                    android:paddingLeft="16dp"
+                    android:background="@drawable/bg_search_input"
+                    android:singleLine="true" />
+
+                <ImageButton
+                    android:id="@+id/btnSort"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:layout_marginLeft="12dp"
+                    android:src="@drawable/ic_sort"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:scaleType="centerInside" />
+            </LinearLayout>
+
+            <!-- Secondary Controls -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginLeft="16dp"
+                android:gravity="center_vertical">
+
+                <!-- Scale Controls -->
+                <LinearLayout
+                    android:id="@+id/scaleLayout"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginRight="16dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <Button
+                        android:id="@+id/btnScaleDown"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:text="-"
+                        android:textSize="18sp"
+                        android:background="#FAFAFA" />
+                    <TextView
+                        android:id="@+id/txtScaleInfo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="100%"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginLeft="12dp"
+                        android:layout_marginRight="12dp" />
+                    <Button
+                        android:id="@+id/btnScaleUp"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:text="+"
+                        android:textSize="18sp"
+                        android:background="#FAFAFA" />
+                </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/btnRefresh"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@android:drawable/ic_popup_sync"
+                    android:background="?android:attr/selectableItemBackground" />
+
+                <ImageButton
+                    android:id="@+id/btnSettings"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@android:drawable/ic_menu_manage"
+                    android:background="?android:attr/selectableItemBackground" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Time Machine Dashboard (Tablet) -->
+        <LinearLayout
+            android:id="@+id/timeMachineDashboard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="10dp"
+            android:background="#FFF3E0"
+            android:gravity="center_vertical"
+            android:visibility="gone">
+            <TextView android:id="@+id/txtCurrentSimTime" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="🕒 模拟时间: 2024-01-01" android:textSize="14sp" android:textColor="#E65100" />
+            <Button android:id="@+id/btnTimePlus1D" android:layout_width="wrap_content" android:layout_height="36dp" android:text="+1天" android:textSize="12sp" android:minHeight="0dp" android:minWidth="60dp" android:layout_marginRight="8dp" />
+            <Button android:id="@+id/btnTimePlus1W" android:layout_width="wrap_content" android:layout_height="36dp" android:text="+1周" android:textSize="12sp" android:minHeight="0dp" android:minWidth="60dp" android:layout_marginRight="8dp" />
+            <Button android:id="@+id/btnTimePlus1M" android:layout_width="wrap_content" android:layout_height="36dp" android:text="+1月" android:textSize="12sp" android:minHeight="0dp" android:minWidth="60dp" android:layout_marginRight="8dp" />
+            <Button android:id="@+id/btnTimeReset" android:layout_width="wrap_content" android:layout_height="36dp" android:text="回到今天" android:textSize="12sp" android:minHeight="0dp" android:minWidth="80dp" android:background="@color/accent_danger_bg" android:textColor="@color/accent_danger" />
+        </LinearLayout>
+
+        <!-- Dynamic Content (RecyclerView, etc.) -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#FFFFFF"
+            android:scrollbars="none">
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <LinearLayout android:id="@+id/fridgeTabs" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <Button android:id="@+id/btnSummary" android:layout_width="120dp" android:layout_height="64dp" android:text="汇总" android:textSize="20sp" android:textStyle="bold" android:background="#FAFAFA" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/quickEntryBar" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginLeft="8dp" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/foodList"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/txtAppVersion"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentBottom="true"
+        android:layout_margin="8dp"
+        android:text="V4.0.0-RC2"
+        android:textSize="12sp"
+        android:textColor="#999999" />
+
+</RelativeLayout>

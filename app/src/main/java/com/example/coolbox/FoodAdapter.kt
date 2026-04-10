@@ -23,7 +23,8 @@ private val onTakeOne: (FoodEntity) -> Unit,
 private val onTakeAll: (FoodEntity) -> Unit,
 private val getFontScale: () -> Float,
 private val getNowMs: () -> Long,
-private val getFridgeBases: () -> List<String>
+private val getFridgeBases: () -> List<String>,
+private val getCurrentSpace: () -> Int // Added space awareness
 ) : RecyclerView.Adapter<FoodAdapter.ViewHolder>() {
 private var items = emptyList<FoodEntity>()
 
@@ -39,7 +40,12 @@ override fun onBindViewHolder(holder: ViewHolder, position: Int) {
     val item = items[position]
     val scale = getFontScale()
     val nowMs = getNowMs()
+    val space = getCurrentSpace()
+    val context = holder.itemView.context
     
+    val activeColor = if (space == 1) context.resources.getColor(R.color.med_primary) else context.resources.getColor(R.color.food_primary)
+    val lightColor = if (space == 1) context.resources.getColor(R.color.blue_light) else context.resources.getColor(R.color.green_light)
+
     holder.name.textSize = 20f * scale
     holder.detail.textSize = 14f * scale
     holder.quantity.textSize = 16f * scale
@@ -52,7 +58,11 @@ override fun onBindViewHolder(holder: ViewHolder, position: Int) {
     val dateStr = "至 ：" + df.format(Date(item.expiryDateMs))
     holder.detail.text = dateStr
     holder.quantity.text = "${formatQuantity(item.quantity)} ${item.unit}"
-    holder.portions.text = "${item.portions} 份，${formatQuantity(item.weightPerPortion)}${item.unit}/份"
+    if (item.portions > 1) {
+        holder.portions.text = "${item.portions} 份，${formatQuantity(item.weightPerPortion)}${item.unit}/份"
+    } else {
+        holder.portions.text = "1 份"
+    }
     
     holder.remark.visibility = View.VISIBLE
     if (item.remark.isNotBlank()) {
@@ -63,8 +73,11 @@ override fun onBindViewHolder(holder: ViewHolder, position: Int) {
     // Build 44: 保持与底层数据及其他对话框完全一致的显示格式，不遮蔽横杠
     val shortLoc = item.fridgeName.replace("室", "").replace("第", "")
     holder.location.text = "在：$shortLoc"
-    applySafeIcon(holder.icon, item)
+    applySafeIcon(holder.icon, holder.iconEmoji, item)
     holder.icon.setOnClickListener {
+        (holder.itemView.context as MainActivity).actionHelper.showIconPickerDialog(item)
+    }
+    holder.iconEmoji.setOnClickListener {
         (holder.itemView.context as MainActivity).actionHelper.showIconPickerDialog(item)
     }
     
@@ -74,21 +87,60 @@ override fun onBindViewHolder(holder: ViewHolder, position: Int) {
     val totalDuration = item.expiryDateMs - item.inputDateMs
     val currentNowMs = getNowMs()
     val nearExpiryThreshold = if (totalDuration > 0) item.expiryDateMs - (totalDuration / 4) else currentNowMs + 3 * 24 * 60 * 60 * 1000L
+    
     if (currentNowMs >= item.expiryDateMs) {
         container.setBackgroundResource(R.drawable.bg_item_expired)
         holder.status.visibility = View.VISIBLE
         holder.status.text = "已过期"
-        holder.status.setTextColor(android.graphics.Color.RED)
+        holder.status.setTextColor(android.graphics.Color.WHITE)
+        
+        // Build 4.0: White text on Red background for visibility
+        val white = android.graphics.Color.WHITE
+        holder.name.setTextColor(white)
+        holder.detail.setTextColor(white)
+        holder.quantity.setTextColor(white)
+        holder.portions.setTextColor(white)
+        holder.remark.setTextColor(white)
+        holder.location.setTextColor(white)
     } else if (currentNowMs >= nearExpiryThreshold) {
         container.setBackgroundResource(R.drawable.bg_item_near)
         holder.status.visibility = View.VISIBLE
         val daysRemaining = Math.max(0, Math.ceil((item.expiryDateMs - currentNowMs).toDouble() / (24 * 60 * 60 * 1000)).toInt())
         holder.status.text = "临期提醒: 剩余 $daysRemaining 天"
         holder.status.setTextColor(android.graphics.Color.parseColor("#FF9800"))
+        
+        // Reset colors for non-expired
+        val black = android.graphics.Color.parseColor("#333333")
+        holder.name.setTextColor(black)
+        holder.detail.setTextColor(android.graphics.Color.GRAY)
+        holder.quantity.setTextColor(black)
+        holder.portions.setTextColor(android.graphics.Color.GRAY)
+        holder.remark.setTextColor(android.graphics.Color.GRAY)
+        holder.location.setTextColor(android.graphics.Color.GRAY)
     } else {
         container.setBackgroundResource(R.drawable.bg_item_normal)
         holder.status.visibility = View.GONE
+        
+        val black = android.graphics.Color.parseColor("#333333")
+        holder.name.setTextColor(black)
+        holder.detail.setTextColor(android.graphics.Color.GRAY)
+        holder.quantity.setTextColor(black)
+        holder.portions.setTextColor(android.graphics.Color.GRAY)
+        holder.remark.setTextColor(android.graphics.Color.GRAY)
+        holder.location.setTextColor(android.graphics.Color.GRAY)
     }
+    
+    // Action Button Colors
+    val btnOneBg = if (space == 1) R.drawable.bg_btn_item_one else R.drawable.bg_btn_item_one_green
+    val btnAllBg = if (space == 1) R.drawable.bg_btn_item_all else R.drawable.bg_btn_item_all_green
+    val btnOneTextColor = if (space == 1) android.graphics.Color.parseColor("#FF1976D2") else android.graphics.Color.parseColor("#FF388E3C")
+    val btnAllTextColor = if (space == 1) android.graphics.Color.parseColor("#FF1976D2") else android.graphics.Color.parseColor("#FF388E3C")
+
+    holder.btnTakeOne.setBackgroundResource(btnOneBg)
+    holder.btnTakeOne.setTextColor(btnOneTextColor)
+    holder.btnTakeAll.setBackgroundResource(btnAllBg)
+    holder.btnTakeAll.setTextColor(btnAllTextColor)
+
     // Surface Actions
     if (item.portions > 1) {
         holder.btnTakeOne.visibility = View.VISIBLE
@@ -100,11 +152,22 @@ override fun onBindViewHolder(holder: ViewHolder, position: Int) {
     holder.btnTakeAll.setOnClickListener { onTakeAll(item) }
     holder.itemView.setOnClickListener { onAction(item) }
 }
-private fun applySafeIcon(imageView: ImageView, item: FoodEntity) {
+private fun applySafeIcon(imageView: ImageView, emojiView: TextView, item: FoodEntity) {
     val name = item.name
     val iconName = item.icon
     val context = imageView.context
     
+    // Build 4.0: Handle Emoji Icons
+    if (iconName.length < 4 && iconName.any { Character.isSurrogate(it) || it.code > 127 }) {
+        imageView.visibility = View.GONE
+        emojiView.visibility = View.VISIBLE
+        emojiView.text = iconName
+        return
+    }
+
+    imageView.visibility = View.VISIBLE
+    emojiView.visibility = View.GONE
+
     if (name.contains("蛋")) {
         imageView.setImageResource(R.drawable.ic_food_egg)
         return
@@ -130,6 +193,7 @@ private fun applySafeIcon(imageView: ImageView, item: FoodEntity) {
 override fun getItemCount() = items.size
 class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
     val icon: ImageView = view.findViewById(R.id.itemIcon)
+    val iconEmoji: TextView = view.findViewById(R.id.itemIconEmoji)
     val name: TextView = view.findViewById(R.id.itemName)
     val quantity: TextView = view.findViewById(R.id.itemQuantity)
     val remark: TextView = view.findViewById(R.id.itemRemark)

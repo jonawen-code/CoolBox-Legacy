@@ -13,18 +13,22 @@ import com.example.coolbox.legacy.R
 class FoodActionHelper(private val context: Context, private val viewModel: MainViewModel) {
 
     fun showIconPickerDialog(entity: FoodEntity) {
-        val iconList = listOf(
-            "ic_food_beef", "ic_food_pork", "ic_food_chicken", "ic_food_egg",
-            "ic_food_fish", "ic_food_shrimp", "ic_food_crab", "ic_food_ribs",
-            "ic_food_apple", "ic_food_tomato", "ic_food_watermelon", "ic_food_grapes",
-            "ic_food_strawberry", "ic_food_onion", "ic_food_lettuce", "ic_food_milk",
-            "ic_food_yogurt", "ic_food_juice", "ic_food_cola", "ic_food_beer",
-            "ic_food_icecream", "ic_food_durian", "ic_food_blueberries", "ic_food_broccoli", "ic_food_butter",
-            "ic_food_cheese", "ic_food_dumpling", "ic_food_green_apple", "ic_food_pepper",
-            "ic_food_lemon", "ic_food_mango", "ic_food_pear", "ic_food_tangerine",
-            "ic_food_shellfish", "ic_food_mussel", "ic_food_sausages", "ic_food_jam", "ic_food_cooked",
-            "cat_cooked", "cat_meat", "cat_veg", "cat_drink", "cat_snack"
-        )
+        val iconList = if (viewModel.currentSpace.value == 1) {
+            listOf("🌡️", "💊", "🤢", "🩹", "💖", "🥦", "🚑")
+        } else {
+            listOf(
+                "ic_food_beef", "ic_food_pork", "ic_food_chicken", "ic_food_egg",
+                "ic_food_fish", "ic_food_shrimp", "ic_food_crab", "ic_food_ribs",
+                "ic_food_apple", "ic_food_tomato", "ic_food_watermelon", "ic_food_grapes",
+                "ic_food_strawberry", "ic_food_onion", "ic_food_lettuce", "ic_food_milk",
+                "ic_food_yogurt", "ic_food_juice", "ic_food_cola", "ic_food_beer",
+                "ic_food_icecream", "ic_food_durian", "ic_food_blueberries", "ic_food_broccoli", "ic_food_butter",
+                "ic_food_cheese", "ic_food_dumpling", "ic_food_green_apple", "ic_food_pepper",
+                "ic_food_lemon", "ic_food_mango", "ic_food_pear", "ic_food_tangerine",
+                "ic_food_shellfish", "ic_food_mussel", "ic_food_sausages", "ic_food_jam", "ic_food_cooked",
+                "cat_cooked", "cat_meat", "cat_veg", "cat_drink", "cat_snack"
+            )
+        }
         
         val grid = android.widget.GridLayout(context).apply {
             columnCount = 5
@@ -38,21 +42,33 @@ class FoodActionHelper(private val context: Context, private val viewModel: Main
             .create()
 
         iconList.forEach { iconName ->
-            val img = ImageView(context).apply {
-                val resId = context.resources.getIdentifier(iconName, "drawable", context.packageName)
-                if (resId != 0) setImageResource(resId)
+            val isEmoji = iconName.length < 4 && iconName.any { Character.isSurrogate(it) || it.code > 127 }
+            val view = if (isEmoji) {
+                android.widget.TextView(context).apply {
+                    text = iconName
+                    textSize = 32f
+                    gravity = android.view.Gravity.CENTER
+                }
+            } else {
+                ImageView(context).apply {
+                    val resId = context.resources.getIdentifier(iconName, "drawable", context.packageName)
+                    if (resId != 0) setImageResource(resId)
+                    scaleType = ImageView.ScaleType.CENTER_INSIDE
+                }
+            }
+            
+            view.apply {
                 layoutParams = android.widget.GridLayout.LayoutParams().apply {
                     width = (64 * context.resources.displayMetrics.density).toInt()
                     height = (64 * context.resources.displayMetrics.density).toInt()
                     setMargins(4, 4, 4, 4)
                 }
-                scaleType = ImageView.ScaleType.CENTER_INSIDE
                 setOnClickListener {
                     viewModel.updateFoodIcon(entity, iconName)
                     dialog.dismiss()
                 }
             }
-            grid.addView(img)
+            grid.addView(view)
         }
         dialog.show()
     }

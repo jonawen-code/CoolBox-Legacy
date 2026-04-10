@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:gravity="center_vertical"
+    android:background="@drawable/bg_card_flat">
+
+    <TextView
+        android:id="@+id/txtDeviceName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Device Name"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        android:textColor="#333333" />
+
+    <CheckBox
+        android:id="@+id/cbFood"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="食品可见"
+        android:textSize="14sp" />
+
+    <CheckBox
+        android:id="@+id/cbMedicine"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="药箱可见"
+        android:textSize="14sp"
+        android:layout_marginLeft="8dp" />
+    <ImageButton
+        android:id="@+id/btnDeleteDevice"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginLeft="12dp"
+        android:src="@android:drawable/ic_menu_delete"
+        android:background="?android:attr/selectableItemBackground"
+        android:tint="#FF5252" />
+</LinearLayout>
